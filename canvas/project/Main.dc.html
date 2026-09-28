@@ -1,0 +1,1041 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Playtest console</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap">
+<style>
+body { margin: 0; background: #0A1219; }
+* { -webkit-tap-highlight-color: transparent; }
+button { font-family: inherit; }
+.sq-scroll::-webkit-scrollbar { width: 3px; }
+.sq-scroll::-webkit-scrollbar-thumb { background: #2A4356; border-radius: 2px; }
+</style>
+</helmet>
+
+<div style="width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; position: relative; background: #0A1219; color: #EDE4D0; font-family: 'EB Garamond', Georgia, serif; display: flex; flex-direction: column">
+
+  <!-- ============ SETUP ============ -->
+  <sc-if value="{{isSetup}}" hint-placeholder-val="{{true}}">
+  <div style="flex-grow: 1; display: flex; flex-direction: column; padding: 34px 26px 26px 26px; box-sizing: border-box; overflow-y: auto">
+
+    <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3.4px; color: {{accent}}; font-weight: 700">SAHSAH</div>
+
+    <h1 style="margin: 26px 0 0 0; font-size: 46px; line-height: 0.96; font-weight: 500; color: #EDE4D0">Chess<br>The Origins</h1>
+
+    <div style="margin-top: 16px; width: 54px; height: 2px; background: {{accent}}"></div>
+
+    <div style="margin-top: 14px; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2.6px; color: #A8935A; font-weight: 500">PLAYTEST CONSOLE</div>
+
+    <p style="margin: 18px 0 0 0; font-size: 16px; line-height: 1.5; color: #A9BAC6; font-style: italic">No sensors yet. You move the wooden pieces, the console keeps the record — every move in two taps.</p>
+
+    <div style="margin-top: 26px; display: flex; flex-direction: column; gap: 16px">
+
+      <div style="display: flex; flex-direction: column; gap: 7px">
+        <label for="f-session" style="font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 2.2px; color: #8FA3B0">SESSION</label>
+        <input id="f-session" type="text" value="{{session}}" onChange="{{onSession}}" style="box-sizing: border-box; width: 100%; height: 50px; padding: 0 14px; background: #101E29; border: 1px solid #23394A; border-radius: 3px; color: #EDE4D0; font-family: 'EB Garamond', Georgia, serif; font-size: 18px; outline: none">
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 7px">
+        <label for="f-white" style="font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 2.2px; color: #8FA3B0">WHITE</label>
+        <input id="f-white" type="text" value="{{white}}" onChange="{{onWhite}}" style="box-sizing: border-box; width: 100%; height: 50px; padding: 0 14px; background: #101E29; border: 1px solid #23394A; border-radius: 3px; color: #EDE4D0; font-family: 'EB Garamond', Georgia, serif; font-size: 18px; outline: none">
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 7px">
+        <label for="f-black" style="font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 2.2px; color: #8FA3B0">BLACK</label>
+        <input id="f-black" type="text" value="{{black}}" onChange="{{onBlack}}" style="box-sizing: border-box; width: 100%; height: 50px; padding: 0 14px; background: #101E29; border: 1px solid #23394A; border-radius: 3px; color: #EDE4D0; font-family: 'EB Garamond', Georgia, serif; font-size: 18px; outline: none">
+      </div>
+
+    </div>
+
+    <button type="button" onClick="{{startMatch}}" style="margin-top: 26px; height: 58px; border: none; border-radius: 3px; background: {{accent}}; color: #14202B; font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 2.6px; font-weight: 700; cursor: pointer">START MATCH</button>
+
+    <sc-if value="{{hasSaved}}" hint-placeholder-val="{{true}}">
+      <button type="button" onClick="{{resume}}" style="margin-top: 11px; height: 50px; border: 1px solid #2E4A5E; border-radius: 3px; background: transparent; color: #C7D6E0; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; cursor: pointer">RESUME &middot; {{savedLabel}}</button>
+    </sc-if>
+
+    <p style="margin: 22px 0 0 0; font-size: 14.5px; line-height: 1.5; color: #7E93A1">Mark the terrain from your printed map once the match is running — More &rarr; Mark terrain.</p>
+
+  </div>
+  </sc-if>
+
+  <!-- ============ MATCH ============ -->
+  <sc-if value="{{isMatch}}" hint-placeholder-val="{{true}}">
+  <div style="flex-grow: 1; display: flex; flex-direction: column; min-height: 0">
+
+    <!-- top bar -->
+    <div style="height: 44px; flex-shrink: 0; padding: 0 16px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #1B2D3B">
+      <span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2.8px; color: {{accent}}; font-weight: 700">SAHSAH</span>
+      <span style="flex-grow: 1; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.4px; color: #7E93A1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis">{{session}}</span>
+      <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 1.2px; color: #C7D6E0; font-variant-numeric: tabular-nums">{{clock}}</span>
+    </div>
+
+    <!-- banner: turn, or terrain mode -->
+    <sc-if value="{{terrainMode}}" hint-placeholder-val="{{true}}">
+      <div style="flex-shrink: 0; padding: 11px 16px; background: #16242F; border-bottom: 1px solid #23394A; display: flex; align-items: center; gap: 10px">
+        <div style="flex-grow: 1">
+          <div style="font-size: 20px; line-height: 1.1; color: #EDE4D0">Marking terrain</div>
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 1.6px; color: #8FA3B0; margin-top: 3px">TAP SQUARES &middot; {{terrainCount}} MARKED</div>
+        </div>
+        <button type="button" onClick="{{exitTerrain}}" style="height: 44px; padding: 0 16px; border: 1px solid {{accent}}; border-radius: 3px; background: transparent; color: {{accent}}; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.8px; cursor: pointer">DONE</button>
+      </div>
+      <div style="flex-shrink: 0; padding: 9px 16px; display: flex; gap: 6px; border-bottom: 1px solid #1B2D3B">
+        <sc-for list="{{terrainTypes}}" as="t" hint-placeholder-count="5">
+          <button type="button" onClick="{{t.pick}}" aria-label="{{t.name}}" style="flex-grow: 1; height: 46px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border: 1px solid {{t.border}}; border-radius: 3px; background: {{t.bg}}; cursor: pointer">
+            <span style="font-size: 15px; line-height: 1; color: {{t.color}}">{{t.mark}}</span>
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 7.5px; letter-spacing: 0.8px; color: {{t.color}}">{{t.short}}</span>
+          </button>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{playMode}}" hint-placeholder-val="{{true}}">
+      <div style="flex-shrink: 0; padding: 12px 16px 11px 16px; display: flex; align-items: flex-end; gap: 10px; border-bottom: 1px solid #1B2D3B">
+        <div style="flex-grow: 1; min-width: 0">
+          <div style="font-size: 25px; line-height: 1.05; color: #EDE4D0">{{turnLine}}</div>
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.6px; color: #8FA3B0; margin-top: 4px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis">{{turnPlayer}}</div>
+        </div>
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.6px; color: #7E93A1; padding-bottom: 3px">MOVE {{moveNo}}</div>
+      </div>
+    </sc-if>
+
+    <!-- board -->
+    <div style="flex-shrink: 0; padding: 13px 16px 4px 16px; display: flex; gap: 5px">
+      <div style="width: 11px; display: flex; flex-direction: column; padding-top: 0">
+        <sc-for list="{{rankLabels}}" as="r" hint-placeholder-count="8">
+          <div style="height: 42px; display: flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-size: 8.5px; color: #8FA3B0">{{r.n}}</div>
+        </sc-for>
+      </div>
+      <div>
+        <div style="display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); width: 336px; border: 1px solid #3E5566">
+          <sc-for list="{{cells}}" as="c" hint-placeholder-count="64">
+            <button type="button" onClick="{{c.tap}}" aria-label="{{c.aria}}" style="position: relative; height: 42px; padding: 0; margin: 0; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; background: {{c.bg}}; box-shadow: {{c.ring}}">
+              <sc-if value="{{c.hasTerrain}}" hint-placeholder-val="{{true}}">
+                <span style="position: absolute; left: 2px; top: 1px; font-size: 11px; line-height: 1; color: {{c.tColor}}; text-shadow: 0 1px 2px rgba(0,0,0,0.75)">{{c.tMark}}</span>
+              </sc-if>
+              <sc-if value="{{c.hasPiece}}" hint-placeholder-val="{{true}}">
+                <span style="font-size: 28px; line-height: 1; color: {{c.pColor}}; text-shadow: {{c.pShadow}}">{{c.glyph}}</span>
+              </sc-if>
+              <sc-if value="{{c.isHint}}" hint-placeholder-val="{{true}}">
+                <span style="position: absolute; width: 9px; height: 9px; border-radius: 50%; background: rgba(12,20,28,0.5); border: 1.5px solid {{accent}}"></span>
+              </sc-if>
+            </button>
+          </sc-for>
+        </div>
+        <div style="display: flex; width: 336px">
+          <sc-for list="{{fileLabels}}" as="f" hint-placeholder-count="8">
+            <div style="flex-grow: 1; height: 14px; display: flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-size: 8.5px; color: #8FA3B0">{{f.n}}</div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+
+    <!-- effects rail -->
+    <div style="flex-shrink: 0; padding: 4px 16px 9px 16px; display: flex; align-items: center; gap: 7px; min-height: 46px">
+      <span style="font-family: 'JetBrains Mono', monospace; font-size: 8.5px; letter-spacing: 1.6px; color: #8FA3B0; flex-shrink: 0">ACTIVE</span>
+      <div class="sq-scroll" style="flex-grow: 1; display: flex; gap: 6px; overflow-x: auto; min-width: 0">
+        <sc-if value="{{noEffects}}" hint-placeholder-val="{{true}}">
+          <span style="font-size: 14.5px; color: #7E93A1; font-style: italic">nothing in play</span>
+        </sc-if>
+        <sc-for list="{{effects}}" as="e" hint-placeholder-count="2">
+          <button type="button" onClick="{{e.tap}}" aria-label="{{e.aria}}" style="flex-shrink: 0; height: 34px; padding: 0 9px; display: flex; align-items: center; gap: 7px; border: 1px solid {{accent}}; border-radius: 2px; background: #1B2A1C; cursor: pointer">
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 1.3px; color: {{accent}}; font-weight: 700">{{e.name}}</span>
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #C7D6E0">{{e.left}}</span>
+          </button>
+        </sc-for>
+      </div>
+    </div>
+
+    <!-- log -->
+    <div class="sq-scroll" style="flex-grow: 1; min-height: 0; overflow-y: auto; border-top: 1px solid #1B2D3B">
+      <sc-if value="{{noMoves}}" hint-placeholder-val="{{true}}">
+        <div style="padding: 16px; font-size: 15px; color: #7E93A1; font-style: italic">Tap the piece you moved, then the square it landed on.</div>
+      </sc-if>
+      <sc-for list="{{logRows}}" as="m" hint-placeholder-count="4">
+        <div style="padding: 7px 16px; display: flex; align-items: baseline; gap: 10px; background: {{m.bg}}; border-bottom: 1px solid #16242F">
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #8FA3B0; width: 24px; flex-shrink: 0">{{m.num}}</span>
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: {{m.sanColor}}; flex-shrink: 0">{{m.san}}</span>
+          <div style="flex-grow: 1; display: flex; flex-wrap: wrap; gap: 4px; align-items: baseline">
+            <sc-for list="{{m.tags}}" as="g" hint-placeholder-count="1">
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 8.5px; letter-spacing: 1.1px; padding: 2px 5px; border-radius: 2px; color: {{g.color}}; background: {{g.bg}}">{{g.t}}</span>
+            </sc-for>
+            <sc-if value="{{m.hasNote}}" hint-placeholder-val="{{true}}">
+              <span style="font-size: 14px; color: #8FA3B0; font-style: italic">{{m.note}}</span>
+            </sc-if>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+
+    <!-- bottom bar -->
+    <div style="flex-shrink: 0; height: 62px; display: flex; border-top: 1px solid #23394A; background: #0D1A24">
+      <button type="button" onClick="{{undo}}" disabled="{{noMoves}}" style="flex-grow: 1; border: none; border-right: 1px solid #1B2D3B; background: transparent; color: {{undoColor}}; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; cursor: pointer">
+        <span style="font-size: 17px; line-height: 1">&#8630;</span>
+        <span style="font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 1.3px">UNDO</span>
+      </button>
+      <button type="button" onClick="{{openTag}}" disabled="{{noMoves}}" style="flex-grow: 1; border: none; border-right: 1px solid #1B2D3B; background: transparent; color: {{flagColor}}; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; cursor: pointer">
+        <span style="font-size: 17px; line-height: 1">&#9873;</span>
+        <span style="font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 1.3px">FLAG</span>
+      </button>
+      <button type="button" onClick="{{openCard}}" style="flex-grow: 1; border: none; border-right: 1px solid #1B2D3B; background: transparent; color: #C7D6E0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; cursor: pointer">
+        <span style="font-size: 15px; line-height: 1">&#9670;</span>
+        <span style="font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 1.3px">CARD</span>
+      </button>
+      <button type="button" onClick="{{openMore}}" style="flex-grow: 1; border: none; background: transparent; color: #C7D6E0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; cursor: pointer">
+        <span style="font-size: 17px; line-height: 1">&#8943;</span>
+        <span style="font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 1.3px">MORE</span>
+      </button>
+    </div>
+
+  </div>
+  </sc-if>
+
+  <!-- ============ SUMMARY ============ -->
+  <sc-if value="{{isSummary}}" hint-placeholder-val="{{true}}">
+  <div style="flex-grow: 1; display: flex; flex-direction: column; min-height: 0">
+    <div style="flex-shrink: 0; padding: 26px 22px 14px 22px; border-bottom: 1px solid #1B2D3B">
+      <div style="font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 2.4px; color: {{accent}}; font-weight: 700">PLAYTEST LOG</div>
+      <h2 style="margin: 9px 0 0 0; font-size: 30px; font-weight: 500; line-height: 1.05">{{session}}</h2>
+      <div style="margin-top: 11px; display: flex; gap: 20px">
+        <div>
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 8.5px; letter-spacing: 1.4px; color: #8FA3B0">MOVES</div>
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 17px; color: #EDE4D0; margin-top: 2px">{{plyCount}}</div>
+        </div>
+        <div>
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 8.5px; letter-spacing: 1.4px; color: #8FA3B0">LENGTH</div>
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 17px; color: #EDE4D0; margin-top: 2px">{{clock}}</div>
+        </div>
+        <div>
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 8.5px; letter-spacing: 1.4px; color: #8FA3B0">FLAGGED</div>
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 17px; color: {{accent}}; margin-top: 2px">{{flaggedCount}}</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="flex-shrink: 0; padding: 11px 22px; display: flex; gap: 7px; border-bottom: 1px solid #1B2D3B">
+      <button type="button" onClick="{{fmtText}}" style="flex-grow: 1; height: 40px; border: 1px solid {{textBorder}}; border-radius: 2px; background: {{textBg}}; color: {{textColor}}; font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 1.6px; cursor: pointer">READABLE</button>
+      <button type="button" onClick="{{fmtJson}}" style="flex-grow: 1; height: 40px; border: 1px solid {{jsonBorder}}; border-radius: 2px; background: {{jsonBg}}; color: {{jsonColor}}; font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 1.6px; cursor: pointer">JSON</button>
+    </div>
+
+    <div class="sq-scroll" style="flex-grow: 1; min-height: 0; overflow: auto; padding: 14px 22px; background: #081016">
+      <pre style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; line-height: 1.6; color: #C7D6E0; white-space: pre; user-select: text">{{exportText}}</pre>
+    </div>
+
+    <div style="flex-shrink: 0; padding: 13px 22px 22px 22px; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid #23394A">
+      <button type="button" onClick="{{copy}}" style="height: 52px; border: none; border-radius: 3px; background: {{accent}}; color: #14202B; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2.2px; font-weight: 700; cursor: pointer">{{copyLabel}}</button>
+      <div style="display: flex; gap: 8px">
+        <button type="button" onClick="{{backToMatch}}" style="flex-grow: 1; height: 46px; border: 1px solid #2E4A5E; border-radius: 3px; background: transparent; color: #C7D6E0; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.6px; cursor: pointer">BACK</button>
+        <button type="button" onClick="{{newMatch}}" style="flex-grow: 1; height: 46px; border: 1px solid #2E4A5E; border-radius: 3px; background: transparent; color: #C7D6E0; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.6px; cursor: pointer">NEW MATCH</button>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ============ SHEETS ============ -->
+  <sc-if value="{{sheetOpen}}" hint-placeholder-val="{{true}}">
+  <div style="position: absolute; left: 0; top: 0; width: 390px; height: 844px; background: rgba(6,11,16,0.78); display: flex; flex-direction: column; justify-content: flex-end">
+
+    <button type="button" onClick="{{closeSheet}}" aria-label="Close" style="flex-grow: 1; border: none; background: transparent; cursor: pointer"></button>
+
+    <div style="flex-shrink: 0; background: #101E29; border-top: 1px solid {{accent}}; padding: 18px 20px 24px 20px; max-height: 660px; overflow-y: auto" class="sq-scroll">
+
+      <!-- TAG SHEET -->
+      <sc-if value="{{sheetTag}}" hint-placeholder-val="{{true}}">
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 2.2px; color: {{accent}}; font-weight: 700">FLAG MOVE</div>
+        <div style="margin-top: 7px; font-size: 24px; color: #EDE4D0">{{lastSan}}</div>
+        <div style="margin-top: 16px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px">
+          <sc-for list="{{tagOptions}}" as="g" hint-placeholder-count="9">
+            <button type="button" onClick="{{g.tap}}" style="height: 48px; border: 1px solid {{g.border}}; border-radius: 2px; background: {{g.bg}}; color: {{g.color}}; font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 1.2px; cursor: pointer">{{g.t}}</button>
+          </sc-for>
+        </div>
+        <div style="margin-top: 14px; display: flex; flex-direction: column; gap: 7px">
+          <label for="f-note" style="font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 2px; color: #8FA3B0">NOTE</label>
+          <input id="f-note" type="text" value="{{noteDraft}}" onChange="{{onNote}}" placeholder="what happened" style="box-sizing: border-box; width: 100%; height: 50px; padding: 0 13px; background: #0B1620; border: 1px solid #23394A; border-radius: 3px; color: #EDE4D0; font-family: 'EB Garamond', Georgia, serif; font-size: 17px; outline: none">
+        </div>
+        <button type="button" onClick="{{closeSheet}}" style="margin-top: 16px; width: 100%; height: 52px; border: none; border-radius: 3px; background: {{accent}}; color: #14202B; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2.2px; font-weight: 700; cursor: pointer">DONE</button>
+      </sc-if>
+
+      <!-- CARD SHEET -->
+      <sc-if value="{{sheetCard}}" hint-placeholder-val="{{true}}">
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 2.2px; color: {{accent}}; font-weight: 700">PUT A CARD IN PLAY</div>
+        <p style="margin: 9px 0 0 0; font-size: 15px; color: #8FA3B0; font-style: italic; line-height: 1.45">Type whatever the card is called. It ticks down one step per move and drops off on its own.</p>
+
+        <div style="margin-top: 16px; display: flex; flex-direction: column; gap: 7px">
+          <label for="f-card" style="font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 2px; color: #8FA3B0">CARD</label>
+          <input id="f-card" type="text" value="{{cardDraft}}" onChange="{{onCard}}" placeholder="Fog of war" style="box-sizing: border-box; width: 100%; height: 50px; padding: 0 13px; background: #0B1620; border: 1px solid #23394A; border-radius: 3px; color: #EDE4D0; font-family: 'EB Garamond', Georgia, serif; font-size: 17px; outline: none">
+        </div>
+
+        <div style="margin-top: 14px; font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 2px; color: #8FA3B0">AFFECTS</div>
+        <div style="margin-top: 7px; display: flex; gap: 7px">
+          <sc-for list="{{scopeOptions}}" as="s" hint-placeholder-count="3">
+            <button type="button" onClick="{{s.tap}}" style="flex-grow: 1; height: 46px; border: 1px solid {{s.border}}; border-radius: 2px; background: {{s.bg}}; color: {{s.color}}; font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 1.2px; cursor: pointer">{{s.t}}</button>
+          </sc-for>
+        </div>
+
+        <div style="margin-top: 14px; font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 2px; color: #8FA3B0">LASTS</div>
+        <div style="margin-top: 7px; display: flex; align-items: center; gap: 10px">
+          <button type="button" onClick="{{durDown}}" aria-label="Fewer turns" style="width: 52px; height: 52px; border: 1px solid #2E4A5E; border-radius: 2px; background: transparent; color: #EDE4D0; font-size: 22px; cursor: pointer">&minus;</button>
+          <div style="flex-grow: 1; text-align: center">
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 26px; color: #EDE4D0">{{durLabel}}</div>
+          </div>
+          <button type="button" onClick="{{durUp}}" aria-label="More turns" style="width: 52px; height: 52px; border: 1px solid #2E4A5E; border-radius: 2px; background: transparent; color: #EDE4D0; font-size: 22px; cursor: pointer">+</button>
+        </div>
+
+        <button type="button" onClick="{{addCard}}" style="margin-top: 18px; width: 100%; height: 52px; border: none; border-radius: 3px; background: {{accent}}; color: #14202B; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2.2px; font-weight: 700; cursor: pointer">PUT IN PLAY</button>
+      </sc-if>
+
+      <!-- PROMOTION SHEET -->
+      <sc-if value="{{sheetPromo}}" hint-placeholder-val="{{true}}">
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 2.2px; color: {{accent}}; font-weight: 700">PAWN REACHED THE LAST RANK</div>
+        <p style="margin: 9px 0 0 0; font-size: 15px; color: #8FA3B0; font-style: italic">What did it become?</p>
+        <div style="margin-top: 16px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 7px">
+          <sc-for list="{{promoOptions}}" as="p" hint-placeholder-count="5">
+            <button type="button" onClick="{{p.tap}}" aria-label="{{p.name}}" style="height: 66px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; border: 1px solid #2E4A5E; border-radius: 2px; background: #0B1620; cursor: pointer">
+              <span style="font-size: 25px; line-height: 1; color: {{p.color}}">{{p.glyph}}</span>
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 7.5px; letter-spacing: 0.8px; color: #8FA3B0">{{p.short}}</span>
+            </button>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <!-- MORE SHEET -->
+      <sc-if value="{{sheetMore}}" hint-placeholder-val="{{true}}">
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 2.2px; color: {{accent}}; font-weight: 700">MATCH</div>
+
+        <button type="button" onClick="{{toggleHints}}" style="margin-top: 14px; width: 100%; height: 58px; padding: 0 15px; display: flex; align-items: center; gap: 13px; border: 1px solid #23394A; border-radius: 3px; background: #0B1620; cursor: pointer; text-align: left">
+          <span style="width: 42px; height: 24px; flex-shrink: 0; border-radius: 12px; background: {{hintsTrackBg}}; display: flex; align-items: center; justify-content: {{hintsJustify}}; padding: 2px; box-sizing: border-box">
+            <span style="width: 20px; height: 20px; border-radius: 50%; background: {{hintsKnobBg}}"></span>
+          </span>
+          <span style="flex-grow: 1">
+            <span style="display: block; font-size: 17px; color: #EDE4D0">Move hints</span>
+            <span style="display: block; font-family: 'JetBrains Mono', monospace; font-size: 8.5px; letter-spacing: 1.2px; color: #8FA3B0; margin-top: 2px">STANDARD CHESS &middot; A GUIDE, NEVER A BLOCK</span>
+          </span>
+        </button>
+
+        <button type="button" onClick="{{enterTerrain}}" style="margin-top: 8px; width: 100%; height: 58px; padding: 0 15px; display: flex; align-items: center; gap: 13px; border: 1px solid #23394A; border-radius: 3px; background: #0B1620; cursor: pointer; text-align: left">
+          <span style="width: 42px; flex-shrink: 0; font-size: 17px; color: {{accent}}; text-align: center">&#9650;</span>
+          <span style="flex-grow: 1">
+            <span style="display: block; font-size: 17px; color: #EDE4D0">Mark terrain</span>
+            <span style="display: block; font-family: 'JetBrains Mono', monospace; font-size: 8.5px; letter-spacing: 1.2px; color: #8FA3B0; margin-top: 2px">COPY YOUR PRINTED MAP ONTO THE GRID</span>
+          </span>
+        </button>
+
+        <button type="button" onClick="{{swapSide}}" style="margin-top: 8px; width: 100%; height: 58px; padding: 0 15px; display: flex; align-items: center; gap: 13px; border: 1px solid #23394A; border-radius: 3px; background: #0B1620; cursor: pointer; text-align: left">
+          <span style="width: 42px; flex-shrink: 0; font-size: 17px; color: #C7D6E0; text-align: center">&#8645;</span>
+          <span style="flex-grow: 1">
+            <span style="display: block; font-size: 17px; color: #EDE4D0">Hand the turn over</span>
+            <span style="display: block; font-family: 'JetBrains Mono', monospace; font-size: 8.5px; letter-spacing: 1.2px; color: #8FA3B0; margin-top: 2px">SKIP A SIDE WITHOUT LOGGING A MOVE</span>
+          </span>
+        </button>
+
+        <button type="button" onClick="{{flipBoard}}" style="margin-top: 8px; width: 100%; height: 58px; padding: 0 15px; display: flex; align-items: center; gap: 13px; border: 1px solid #23394A; border-radius: 3px; background: #0B1620; cursor: pointer; text-align: left">
+          <span style="width: 42px; flex-shrink: 0; font-size: 17px; color: #C7D6E0; text-align: center">&#8635;</span>
+          <span style="flex-grow: 1">
+            <span style="display: block; font-size: 17px; color: #EDE4D0">Turn the board around</span>
+            <span style="display: block; font-family: 'JetBrains Mono', monospace; font-size: 8.5px; letter-spacing: 1.2px; color: #8FA3B0; margin-top: 2px">MATCH WHICHEVER SIDE YOU ARE SITTING ON</span>
+          </span>
+        </button>
+
+        <button type="button" onClick="{{endMatch}}" style="margin-top: 16px; width: 100%; height: 54px; border: 1px solid {{accent}}; border-radius: 3px; background: transparent; color: {{accent}}; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2.2px; font-weight: 700; cursor: pointer">END &amp; READ THE LOG</button>
+      </sc-if>
+
+    </div>
+  </div>
+  </sc-if>
+
+</div>
+</x-dc>
+
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#C8A44C","options":["#C8A44C","#B85433","#6E8257","#5B8CA8"],"section":"Theme"},"hintsDefault":{"editor":"boolean","default":true,"section":"Behaviour"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+
+  constructor(props) {
+    super(props);
+    this.KEY = 'cto-playtest-v1';
+    this.state = this.freshState();
+    var saved = this.readSaved();
+    if (saved) { this.state.hasSaved = true; this.state.savedLabel = saved.session || 'match'; }
+  }
+
+  // ---------- constants ----------
+  glyphs() {
+    return { k: '♚︎', q: '♛︎', r: '♜︎', b: '♝︎', n: '♞︎', p: '♟︎' };
+  }
+  terrainDefs() {
+    return [
+      { id: 'mountain', short: 'MTN',  name: 'Mountain', mark: '▲', color: '#CBBBA0' },
+      { id: 'river',    short: 'RIVER', name: 'River',    mark: '≈', color: '#7FB6D4' },
+      { id: 'trench',   short: 'TRNCH', name: 'Trench',   mark: '═', color: '#D08A63' },
+      { id: 'village',  short: 'VLG',  name: 'Village',  mark: '⌂', color: '#9DC07A' },
+      { id: 'erase',    short: 'CLEAR', name: 'Clear',    mark: '×', color: '#8FA3B0' }
+    ];
+  }
+  tagDefs() {
+    return ['MINE', 'MOUNTAIN', 'RIVER', 'TRENCH', 'VILLAGE', 'CARD', 'REFUSED', 'CHECK', 'CAPTURE'];
+  }
+  tagTone(t) {
+    if (t === 'MINE' || t === 'REFUSED') return { color: '#F0A183', bg: 'rgba(184,84,51,0.22)' };
+    if (t === 'CARD') return { color: this.accent(), bg: 'rgba(200,164,76,0.16)' };
+    if (t === 'CAPTURE' || t === 'CHECK') return { color: '#C7D6E0', bg: 'rgba(90,120,142,0.22)' };
+    return { color: '#A8CE8C', bg: 'rgba(110,130,87,0.24)' };
+  }
+  accent() { return this.props.accent || '#C8A44C'; }
+
+  freshState() {
+    return {
+      screen: 'setup',
+      session: 'Playtest 01',
+      white: 'White',
+      black: 'Black',
+      board: this.startBoard(),
+      turn: 'w',
+      moveNo: 1,
+      sel: null,
+      log: [],
+      effects: [],
+      terrain: {},
+      lastMove: null,
+      sheet: null,
+      terrainMode: false,
+      terrainPick: 'mountain',
+      hints: this.props.hintsDefault !== false,
+      flipped: false,
+      noteDraft: '',
+      cardDraft: '',
+      cardScope: 'BOTH',
+      cardDur: 3,
+      pendingPromo: null,
+      startedAt: null,
+      now: Date.now(),
+      exportFmt: 'text',
+      copied: false,
+      hasSaved: false,
+      savedLabel: '',
+      nextId: 1
+    };
+  }
+
+  startBoard() {
+    var back = ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'];
+    var b = [];
+    var i;
+    for (i = 0; i < 64; i++) b.push(null);
+    for (i = 0; i < 8; i++) {
+      b[i] = { t: back[i], c: 'b' };
+      b[8 + i] = { t: 'p', c: 'b' };
+      b[48 + i] = { t: 'p', c: 'w' };
+      b[56 + i] = { t: back[i], c: 'w' };
+    }
+    return b;
+  }
+
+  // ---------- lifecycle ----------
+  componentDidMount() {
+    var self = this;
+    this.timer = setInterval(function () {
+      if (self.state.screen === 'match' && self.state.startedAt) self.setState({ now: Date.now() });
+    }, 1000);
+  }
+  componentWillUnmount() { if (this.timer) clearInterval(this.timer); }
+
+  // ---------- persistence (best effort) ----------
+  readSaved() {
+    try {
+      var raw = window.localStorage.getItem(this.KEY);
+      if (!raw) return null;
+      var o = JSON.parse(raw);
+      if (o && o.board && o.board.length === 64) return o;
+      return null;
+    } catch (e) { return null; }
+  }
+  persist(s) {
+    try {
+      window.localStorage.setItem(this.KEY, JSON.stringify({
+        session: s.session, white: s.white, black: s.black, board: s.board, turn: s.turn,
+        moveNo: s.moveNo, log: s.log, effects: s.effects, terrain: s.terrain,
+        lastMove: s.lastMove, startedAt: s.startedAt, flipped: s.flipped, nextId: s.nextId
+      }));
+    } catch (e) { /* private mode, blocked storage: the match still runs */ }
+  }
+  commit(patch) {
+    var s = Object.assign({}, this.state, patch);
+    this.persist(s);
+    this.setState(patch);
+  }
+
+  // ---------- geometry ----------
+  sqName(i) { return 'abcdefgh'.charAt(i % 8) + String(8 - Math.floor(i / 8)); }
+
+  pieceName(t) {
+    return { k: 'king', q: 'queen', r: 'rook', b: 'bishop', n: 'knight', p: 'pawn' }[t];
+  }
+
+  // Standard chess reach, ignoring check. A guide for the eye, never a gate.
+  hintTargets(board, from) {
+    var p = board[from];
+    if (!p) return {};
+    var out = {};
+    var r = Math.floor(from / 8), f = from % 8;
+    var self = this;
+    var at = function (rr, ff) {
+      if (rr < 0 || rr > 7 || ff < 0 || ff > 7) return undefined;
+      return board[rr * 8 + ff];
+    };
+    var put = function (rr, ff, mode) {
+      if (rr < 0 || rr > 7 || ff < 0 || ff > 7) return false;
+      var q = board[rr * 8 + ff];
+      if (q && q.c === p.c) return false;
+      if (mode === 'quiet' && q) return false;
+      if (mode === 'cap' && !q) return false;
+      out[rr * 8 + ff] = true;
+      return !q;
+    };
+    var slide = function (dr, df) {
+      var rr = r + dr, ff = f + df;
+      while (put(rr, ff, 'any')) { rr += dr; ff += df; }
+    };
+    var t = p.t;
+    if (t === 'p') {
+      var dir = p.c === 'w' ? -1 : 1;
+      var home = p.c === 'w' ? 6 : 1;
+      if (put(r + dir, f, 'quiet') && r === home) put(r + 2 * dir, f, 'quiet');
+      put(r + dir, f - 1, 'cap');
+      put(r + dir, f + 1, 'cap');
+    } else if (t === 'n') {
+      var j = [[-2, -1], [-2, 1], [-1, -2], [-1, 2], [1, -2], [1, 2], [2, -1], [2, 1]];
+      for (var a = 0; a < j.length; a++) put(r + j[a][0], f + j[a][1], 'any');
+    } else if (t === 'k') {
+      for (var dr = -1; dr <= 1; dr++) for (var df = -1; df <= 1; df++) {
+        if (dr || df) put(r + dr, f + df, 'any');
+      }
+    } else {
+      if (t === 'r' || t === 'q') { slide(-1, 0); slide(1, 0); slide(0, -1); slide(0, 1); }
+      if (t === 'b' || t === 'q') { slide(-1, -1); slide(-1, 1); slide(1, -1); slide(1, 1); }
+    }
+    return out;
+  }
+
+  // ---------- move entry ----------
+  tapSquare(i) {
+    var s = this.state;
+    if (s.terrainMode) return this.paintTerrain(i);
+    if (s.sel === null) {
+      if (!s.board[i]) return;
+      this.setState({ sel: i });
+      return;
+    }
+    if (s.sel === i) { this.setState({ sel: null }); return; }
+    var mover = s.board[s.sel];
+    if (!mover) { this.setState({ sel: null }); return; }
+    var target = s.board[i];
+    if (target && target.c === mover.c) { this.setState({ sel: i }); return; }
+    var lastRank = mover.c === 'w' ? 0 : 7;
+    if (mover.t === 'p' && Math.floor(i / 8) === lastRank) {
+      this.setState({ pendingPromo: { from: s.sel, to: i }, sheet: 'promo', sel: null });
+      return;
+    }
+    this.applyMove(s.sel, i, null);
+  }
+
+  applyMove(from, to, promoteTo) {
+    var s = this.state;
+    var mover = s.board[from];
+    var target = s.board[to];
+    var board = s.board.slice();
+    var placed = promoteTo ? { t: promoteTo, c: mover.c } : mover;
+    board[to] = placed;
+    board[from] = null;
+
+    var letter = { k: 'K', q: 'Q', r: 'R', b: 'B', n: 'N', p: '' }[mover.t];
+    var san = letter + this.sqName(from) + (target ? '×' : '–') + this.sqName(to);
+    if (promoteTo) san += '=' + { q: 'Q', r: 'R', b: 'B', n: 'N' }[promoteTo];
+
+    var tags = [];
+    if (target) tags.push('CAPTURE');
+
+    var entry = {
+      id: s.nextId,
+      ply: s.log.length + 1,
+      no: s.moveNo,
+      side: s.turn,
+      san: san,
+      from: this.sqName(from),
+      to: this.sqName(to),
+      piece: this.pieceName(mover.t),
+      captured: target ? this.pieceName(target.t) : null,
+      promotedTo: promoteTo ? this.pieceName(promoteTo) : null,
+      terrainFrom: s.terrain[from] || null,
+      terrainTo: s.terrain[to] || null,
+      tags: tags,
+      note: '',
+      at: Date.now() - (s.startedAt || Date.now())
+    };
+
+    var effects = [];
+    for (var e = 0; e < s.effects.length; e++) {
+      var eff = s.effects[e];
+      var left = eff.left - 1;
+      if (left > 0) effects.push(Object.assign({}, eff, { left: left }));
+    }
+
+    this.commit({
+      board: board,
+      log: s.log.concat([entry]),
+      sel: null,
+      turn: s.turn === 'w' ? 'b' : 'w',
+      moveNo: s.turn === 'b' ? s.moveNo + 1 : s.moveNo,
+      lastMove: { from: from, to: to },
+      effects: effects,
+      pendingPromo: null,
+      sheet: null,
+      nextId: s.nextId + 1
+    });
+  }
+
+  paintTerrain(i) {
+    var s = this.state;
+    var terrain = Object.assign({}, s.terrain);
+    if (s.terrainPick === 'erase') delete terrain[i];
+    else terrain[i] = s.terrainPick;
+    this.commit({ terrain: terrain });
+  }
+
+  undoLast() {
+    var s = this.state;
+    if (!s.log.length) return;
+    var board = this.startBoard();
+    var terrain = s.terrain;
+    var keep = s.log.slice(0, s.log.length - 1);
+    // replay from the opening position so the board and the record never drift apart
+    for (var k = 0; k < keep.length; k++) {
+      var m = keep[k];
+      var fi = this.nameToIdx(m.from), ti = this.nameToIdx(m.to);
+      var mv = board[fi];
+      if (!mv) continue;
+      board[ti] = m.promotedTo ? { t: this.nameToType(m.promotedTo), c: mv.c } : mv;
+      board[fi] = null;
+    }
+    var last = keep.length ? keep[keep.length - 1] : null;
+    var removed = s.log[s.log.length - 1];
+    this.commit({
+      board: board,
+      log: keep,
+      turn: removed.side,
+      moveNo: removed.no,
+      sel: null,
+      lastMove: last ? { from: this.nameToIdx(last.from), to: this.nameToIdx(last.to) } : null,
+      terrain: terrain
+    });
+  }
+
+  nameToIdx(n) {
+    var f = 'abcdefgh'.indexOf(n.charAt(0));
+    var r = 8 - parseInt(n.charAt(1), 10);
+    return r * 8 + f;
+  }
+  nameToType(n) {
+    return { king: 'k', queen: 'q', rook: 'r', bishop: 'b', knight: 'n', pawn: 'p' }[n] || 'q';
+  }
+
+  toggleTag(t) {
+    var s = this.state;
+    if (!s.log.length) return;
+    var log = s.log.slice();
+    var last = Object.assign({}, log[log.length - 1]);
+    var tags = last.tags.slice();
+    var at = tags.indexOf(t);
+    if (at >= 0) tags.splice(at, 1); else tags.push(t);
+    last.tags = tags;
+    log[log.length - 1] = last;
+    this.commit({ log: log });
+  }
+
+  setNote(v) {
+    var s = this.state;
+    if (!s.log.length) { this.setState({ noteDraft: v }); return; }
+    var log = s.log.slice();
+    var last = Object.assign({}, log[log.length - 1]);
+    last.note = v;
+    log[log.length - 1] = last;
+    this.commit({ log: log, noteDraft: v });
+  }
+
+  addEffect() {
+    var s = this.state;
+    var name = (s.cardDraft || '').trim();
+    if (!name) return;
+    var eff = {
+      id: s.nextId,
+      name: name.toUpperCase().slice(0, 18),
+      scope: s.cardScope,
+      left: s.cardDur,
+      fromMove: s.moveNo
+    };
+    this.commit({ effects: s.effects.concat([eff]), cardDraft: '', sheet: null, nextId: s.nextId + 1 });
+  }
+
+  dropEffect(id) {
+    var s = this.state;
+    this.commit({ effects: s.effects.filter(function (e) { return e.id !== id; }) });
+  }
+
+  clockText() {
+    var s = this.state;
+    if (!s.startedAt) return '00:00';
+    var secs = Math.max(0, Math.floor((s.now - s.startedAt) / 1000));
+    var m = Math.floor(secs / 60), ss = secs % 60;
+    return (m < 10 ? '0' : '') + m + ':' + (ss < 10 ? '0' : '') + ss;
+  }
+
+  // ---------- export ----------
+  terrainList() {
+    var s = this.state, out = [];
+    var defs = this.terrainDefs();
+    for (var key in s.terrain) {
+      if (!Object.prototype.hasOwnProperty.call(s.terrain, key)) continue;
+      var id = s.terrain[key];
+      var def = null;
+      for (var d = 0; d < defs.length; d++) if (defs[d].id === id) def = defs[d];
+      out.push({ square: this.sqName(parseInt(key, 10)), terrain: id, label: def ? def.name : id });
+    }
+    out.sort(function (a, b) { return a.square < b.square ? -1 : 1; });
+    return out;
+  }
+
+  exportText() {
+    var s = this.state;
+    if (s.exportFmt === 'json') {
+      return JSON.stringify({
+        game: 'Chess The Origins',
+        session: s.session,
+        white: s.white,
+        black: s.black,
+        length: this.clockText(),
+        terrain: this.terrainList(),
+        moves: s.log.map(function (m) {
+          return {
+            ply: m.ply, no: m.no, side: m.side, move: m.san, from: m.from, to: m.to,
+            piece: m.piece, captured: m.captured, promotedTo: m.promotedTo,
+            terrainFrom: m.terrainFrom, terrainTo: m.terrainTo,
+            tags: m.tags, note: m.note, atMs: m.at
+          };
+        }),
+        effectsInPlay: s.effects
+      }, null, 2);
+    }
+    var L = [];
+    L.push('CHESS THE ORIGINS — PLAYTEST LOG');
+    L.push('');
+    L.push('Session  ' + s.session);
+    L.push('White    ' + s.white);
+    L.push('Black    ' + s.black);
+    L.push('Length   ' + this.clockText());
+    L.push('Moves    ' + s.log.length);
+    var terr = this.terrainList();
+    if (terr.length) {
+      L.push('');
+      L.push('TERRAIN');
+      var line = terr.map(function (t) { return t.square + ' ' + t.label.toUpperCase(); }).join('  ');
+      L.push('  ' + line);
+    }
+    L.push('');
+    L.push('  #  SIDE  MOVE        FLAGS');
+    L.push('  ' + Array(46).join('─'));
+    for (var i = 0; i < s.log.length; i++) {
+      var m = s.log[i];
+      var n = String(m.no);
+      while (n.length < 3) n = ' ' + n;
+      var side = m.side === 'w' ? 'W ' : ' B';
+      var san = m.san;
+      while (san.length < 11) san += ' ';
+      var row = '  ' + n + '  ' + side + '   ' + san + ' ' + m.tags.join(' ');
+      L.push(row.replace(/\s+$/, ''));
+      if (m.note) L.push('                       └ ' + m.note);
+    }
+    if (s.effects.length) {
+      L.push('');
+      L.push('STILL IN PLAY');
+      for (var e = 0; e < s.effects.length; e++) {
+        var ef = s.effects[e];
+        L.push('  ' + ef.name + '  ·  ' + ef.scope + '  ·  ' + ef.left + ' left  ·  from move ' + ef.fromMove);
+      }
+    }
+    return L.join('\n');
+  }
+
+  doCopy() {
+    var self = this;
+    var text = this.exportText();
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function () {
+          self.setState({ copied: true });
+          setTimeout(function () { self.setState({ copied: false }); }, 2000);
+        }, function () { self.setState({ copied: 'manual' }); });
+        return;
+      }
+    } catch (e) { /* fall through */ }
+    this.setState({ copied: 'manual' });
+  }
+
+  // ---------- render ----------
+  renderVals() {
+    var self = this;
+    var s = this.state;
+    var A = this.accent();
+    var G = this.glyphs();
+
+    // --- board cells ---
+    var hints = (s.hints && s.sel !== null && !s.terrainMode) ? this.hintTargets(s.board, s.sel) : {};
+    var tdefs = this.terrainDefs();
+    var tById = {};
+    for (var d = 0; d < tdefs.length; d++) tById[tdefs[d].id] = tdefs[d];
+
+    var order = [];
+    for (var i = 0; i < 64; i++) order.push(s.flipped ? 63 - i : i);
+
+    var cells = order.map(function (idx) {
+      var r = Math.floor(idx / 8), f = idx % 8;
+      var light = (r + f) % 2 === 0;
+      var p = s.board[idx];
+      var terr = s.terrain[idx];
+      var bg = light ? '#8A7B4E' : '#57492B';
+      if (s.lastMove && (s.lastMove.from === idx || s.lastMove.to === idx)) {
+        bg = light ? '#9C8A50' : '#6A5930';
+      }
+      var ring = 'none';
+      if (s.sel === idx) ring = 'inset 0 0 0 3px ' + A;
+      else if (s.terrainMode && terr) ring = 'inset 0 0 0 1px rgba(237,228,208,0.30)';
+
+      var aria = self.sqName(idx);
+      if (p) aria = (p.c === 'w' ? 'white ' : 'black ') + self.pieceName(p.t) + ' on ' + aria;
+      if (terr) aria += ', ' + (tById[terr] ? tById[terr].name : terr);
+
+      return {
+        aria: aria,
+        bg: bg,
+        ring: ring,
+        hasPiece: !!p,
+        glyph: p ? G[p.t] : '',
+        pColor: p ? (p.c === 'w' ? '#F4EDDC' : '#12202B') : '',
+        pShadow: p ? (p.c === 'w' ? '0 1px 3px rgba(0,0,0,0.7)' : '0 1px 2px rgba(240,232,212,0.28)') : 'none',
+        hasTerrain: !!terr,
+        tMark: terr && tById[terr] ? tById[terr].mark : '',
+        tColor: terr && tById[terr] ? tById[terr].color : '#EDE4D0',
+        isHint: !!hints[idx],
+        tap: function () { self.tapSquare(idx); }
+      };
+    });
+
+    var rankLabels = [];
+    var fileLabels = [];
+    for (var q = 0; q < 8; q++) {
+      rankLabels.push({ n: String(s.flipped ? q + 1 : 8 - q) });
+      fileLabels.push({ n: 'abcdefgh'.charAt(s.flipped ? 7 - q : q) });
+    }
+
+    // --- log rows ---
+    var logRows = s.log.map(function (m, k) {
+      var isLast = k === s.log.length - 1;
+      return {
+        num: m.side === 'w' ? m.no + '.' : m.no + '…',
+        san: m.san,
+        sanColor: isLast ? '#EDE4D0' : '#A9BAC6',
+        bg: isLast ? 'rgba(200,164,76,0.07)' : 'transparent',
+        hasNote: !!m.note,
+        note: m.note,
+        tags: m.tags.map(function (t) {
+          var tone = self.tagTone(t);
+          return { t: t, color: tone.color, bg: tone.bg };
+        })
+      };
+    }).reverse();
+
+    // --- effects ---
+    var effects = s.effects.map(function (e) {
+      return {
+        name: e.name,
+        left: e.left + '↓',
+        aria: e.name + ', ' + e.left + ' turns left, tap to remove',
+        tap: function () { self.dropEffect(e.id); }
+      };
+    });
+
+    // --- terrain palette ---
+    var terrainTypes = tdefs.map(function (t) {
+      var on = s.terrainPick === t.id;
+      return {
+        name: t.name, short: t.short, mark: t.mark,
+        color: on ? '#0F1C27' : t.color,
+        bg: on ? t.color : '#101E29',
+        border: on ? t.color : '#23394A',
+        pick: function () { self.setState({ terrainPick: t.id }); }
+      };
+    });
+
+    // --- tag sheet ---
+    var lastMove = s.log.length ? s.log[s.log.length - 1] : null;
+    var tagOptions = this.tagDefs().map(function (t) {
+      var on = lastMove && lastMove.tags.indexOf(t) >= 0;
+      var tone = self.tagTone(t);
+      return {
+        t: t,
+        color: on ? '#0F1C27' : tone.color,
+        bg: on ? tone.color : '#0B1620',
+        border: on ? tone.color : '#23394A',
+        tap: function () { self.toggleTag(t); }
+      };
+    });
+
+    var scopeOptions = ['BOTH', 'WHITE', 'BLACK'].map(function (t) {
+      var on = s.cardScope === t;
+      return {
+        t: t,
+        color: on ? '#14202B' : '#C7D6E0',
+        bg: on ? A : '#0B1620',
+        border: on ? A : '#23394A',
+        tap: function () { self.setState({ cardScope: t }); }
+      };
+    });
+
+    var promoOptions = ['q', 'r', 'b', 'n', 'p'].map(function (t) {
+      return {
+        glyph: G[t],
+        short: t === 'p' ? 'STAY' : self.pieceName(t).toUpperCase().slice(0, 6),
+        name: t === 'p' ? 'stays a pawn' : 'promote to ' + self.pieceName(t),
+        color: s.turn === 'w' ? '#F4EDDC' : '#8FA3B0',
+        tap: function () {
+          var pp = s.pendingPromo;
+          if (!pp) { self.setState({ sheet: null }); return; }
+          self.applyMove(pp.from, pp.to, t === 'p' ? null : t);
+        }
+      };
+    });
+
+    var flagged = 0;
+    for (var z = 0; z < s.log.length; z++) {
+      if (s.log[z].tags.length || s.log[z].note) flagged++;
+    }
+
+    var copyLabel = 'COPY THE LOG';
+    if (s.copied === true) copyLabel = 'COPIED';
+    if (s.copied === 'manual') copyLabel = 'SELECT THE TEXT ABOVE';
+
+    var turnLine = s.turn === 'w' ? 'White to move' : 'Black to move';
+    var turnPlayer = (s.turn === 'w' ? s.white : s.black) || (s.turn === 'w' ? 'White' : 'Black');
+
+    return {
+      accent: A,
+      isSetup: s.screen === 'setup',
+      isMatch: s.screen === 'match',
+      isSummary: s.screen === 'summary',
+
+      session: s.session, white: s.white, black: s.black,
+      onSession: function (e) { self.setState({ session: e.target.value }); },
+      onWhite: function (e) { self.setState({ white: e.target.value }); },
+      onBlack: function (e) { self.setState({ black: e.target.value }); },
+      hasSaved: s.hasSaved,
+      savedLabel: s.savedLabel,
+      startMatch: function () {
+        var f = self.freshState();
+        f.screen = 'match';
+        f.session = s.session; f.white = s.white; f.black = s.black;
+        f.hints = s.hints; f.startedAt = Date.now(); f.now = Date.now();
+        self.persist(f);
+        self.setState(f);
+      },
+      resume: function () {
+        var saved = self.readSaved();
+        if (!saved) return;
+        var f = self.freshState();
+        self.setState(Object.assign(f, saved, { screen: 'match', now: Date.now(), hasSaved: false }));
+      },
+
+      clock: this.clockText(),
+      turnLine: turnLine,
+      turnPlayer: turnPlayer,
+      moveNo: s.moveNo,
+      playMode: !s.terrainMode,
+      terrainMode: s.terrainMode,
+      terrainCount: Object.keys(s.terrain).length,
+      terrainTypes: terrainTypes,
+      exitTerrain: function () { self.setState({ terrainMode: false, sel: null }); },
+      enterTerrain: function () { self.setState({ terrainMode: true, sheet: null, sel: null }); },
+
+      cells: cells,
+      rankLabels: rankLabels,
+      fileLabels: fileLabels,
+
+      effects: effects,
+      noEffects: s.effects.length === 0,
+
+      logRows: logRows,
+      noMoves: s.log.length === 0,
+
+      undo: function () { self.undoLast(); },
+      undoColor: s.log.length ? '#C7D6E0' : '#64798A',
+      openTag: function () { if (s.log.length) self.setState({ sheet: 'tag', noteDraft: lastMove ? lastMove.note : '' }); },
+      flagColor: s.log.length ? '#C7D6E0' : '#64798A',
+      openCard: function () { self.setState({ sheet: 'card' }); },
+      openMore: function () { self.setState({ sheet: 'more' }); },
+
+      sheetOpen: !!s.sheet,
+      sheetTag: s.sheet === 'tag',
+      sheetCard: s.sheet === 'card',
+      sheetMore: s.sheet === 'more',
+      sheetPromo: s.sheet === 'promo',
+      closeSheet: function () { self.setState({ sheet: null, pendingPromo: null }); },
+
+      lastSan: lastMove ? lastMove.san : '',
+      tagOptions: tagOptions,
+      noteDraft: s.noteDraft,
+      onNote: function (e) { self.setNote(e.target.value); },
+
+      cardDraft: s.cardDraft,
+      onCard: function (e) { self.setState({ cardDraft: e.target.value }); },
+      scopeOptions: scopeOptions,
+      durLabel: s.cardDur + (s.cardDur === 1 ? ' turn' : ' turns'),
+      durUp: function () { self.setState({ cardDur: Math.min(20, s.cardDur + 1) }); },
+      durDown: function () { self.setState({ cardDur: Math.max(1, s.cardDur - 1) }); },
+      addCard: function () { self.addEffect(); },
+
+      promoOptions: promoOptions,
+
+      hintsTrackBg: s.hints ? A : '#23394A',
+      hintsKnobBg: s.hints ? '#14202B' : '#7E93A1',
+      hintsJustify: s.hints ? 'flex-end' : 'flex-start',
+      toggleHints: function () { self.setState({ hints: !s.hints }); },
+      swapSide: function () { self.setState({ turn: s.turn === 'w' ? 'b' : 'w', sheet: null, sel: null }); },
+      flipBoard: function () { self.commit({ flipped: !s.flipped, sheet: null, sel: null }); },
+      endMatch: function () { self.setState({ screen: 'summary', sheet: null, sel: null }); },
+
+      plyCount: s.log.length,
+      flaggedCount: flagged,
+      exportText: this.exportText(),
+      fmtText: function () { self.setState({ exportFmt: 'text', copied: false }); },
+      fmtJson: function () { self.setState({ exportFmt: 'json', copied: false }); },
+      textBg: s.exportFmt === 'text' ? A : 'transparent',
+      textColor: s.exportFmt === 'text' ? '#14202B' : '#C7D6E0',
+      textBorder: s.exportFmt === 'text' ? A : '#2E4A5E',
+      jsonBg: s.exportFmt === 'json' ? A : 'transparent',
+      jsonColor: s.exportFmt === 'json' ? '#14202B' : '#C7D6E0',
+      jsonBorder: s.exportFmt === 'json' ? A : '#2E4A5E',
+      copy: function () { self.doCopy(); },
+      copyLabel: copyLabel,
+      backToMatch: function () { self.setState({ screen: 'match' }); },
+      newMatch: function () {
+        var f = self.freshState();
+        f.session = s.session; f.white = s.white; f.black = s.black; f.hints = s.hints;
+        self.setState(f);
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>

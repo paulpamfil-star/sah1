@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Design language</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap">
+<style>
+body { margin: 0; background: #0A1219; }
+</style>
+</helmet>
+
+<div style="width: 1180px; height: 844px; box-sizing: border-box; padding: 44px 48px; background: #0A1219; color: #EDE4D0; font-family: 'EB Garamond', Georgia, serif; display: flex; flex-direction: column; gap: 24px">
+
+  <div style="flex-shrink: 0">
+    <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 3px; color: {{accent}}; font-weight: 700">SAHSAH &middot; DESIGN LANGUAGE</div>
+    <h1 style="margin: 12px 0 0 0; font-size: 42px; font-weight: 500; line-height: 1">Brass on a dark field</h1>
+    <p style="margin: 9px 0 0 0; font-size: 18px; color: #A9BAC6; font-style: italic; max-width: 700px">Lifted from the board itself &mdash; the ochre and moss of the printed map, the brass of the box, one serif for what is said and one monospace for what is counted.</p>
+  </div>
+
+  <div style="flex-grow: 1; min-height: 0; display: flex; gap: 28px">
+
+    <!-- left: palette -->
+    <div style="flex-shrink: 0; width: 372px; display: flex; flex-direction: column; gap: 18px">
+      <div>
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 2.2px; color: #A8935A; font-weight: 500">PALETTE</div>
+        <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 0">
+          <sc-for list="{{swatches}}" as="s" hint-placeholder-count="13">
+            <div style="display: flex; align-items: center; gap: 12px; padding: 5px 0; border-bottom: 1px solid #16242F">
+              <span style="width: 30px; height: 30px; flex-shrink: 0; border-radius: 2px; border: 1px solid #2E4A5E; background: {{s.hex}}"></span>
+              <span style="width: 92px; flex-shrink: 0; font-size: 16px; color: #EDE4D0">{{s.name}}</span>
+              <span style="width: 68px; flex-shrink: 0; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #8FA3B0">{{s.hex}}</span>
+              <span style="flex-grow: 1; font-size: 14.5px; color: #A9BAC6">{{s.use}}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+
+    <!-- right -->
+    <div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 22px">
+
+      <!-- typography -->
+      <div style="flex-shrink: 0">
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 2.2px; color: #A8935A; font-weight: 500">TYPE</div>
+        <div style="margin-top: 12px; display: flex; gap: 26px">
+
+          <div style="flex-grow: 1; flex-basis: 0; border: 1px solid #23394A; border-radius: 3px; background: #0D1A24; padding: 15px 17px">
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 8.5px; letter-spacing: 1.6px; color: #8FA3B0">EB GARAMOND &middot; WHAT IS SAID</div>
+            <div style="margin-top: 10px; font-size: 34px; line-height: 1.05; color: #EDE4D0">White to move</div>
+            <div style="margin-top: 7px; font-size: 18px; color: #A9BAC6; font-style: italic">Long-range pieces limited to three squares.</div>
+            <div style="margin-top: 7px; font-size: 16px; color: #C7D6E0">Headings, card names, prose, anything a player reads aloud.</div>
+          </div>
+
+          <div style="flex-grow: 1; flex-basis: 0; border: 1px solid #23394A; border-radius: 3px; background: #0D1A24; padding: 15px 17px">
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 8.5px; letter-spacing: 1.6px; color: #8FA3B0">JETBRAINS MONO &middot; WHAT IS COUNTED</div>
+            <div style="margin-top: 12px; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; color: {{accent}}; font-weight: 700">SAHSAH</div>
+            <div style="margin-top: 9px; font-family: 'JetBrains Mono', monospace; font-size: 19px; color: #EDE4D0">Bf8&times;c5 &nbsp; 12:04</div>
+            <div style="margin-top: 9px; font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 1.4px; color: #A9BAC6">LABELS &middot; NOTATION &middot; CLOCKS &middot; COUNTDOWNS</div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- terrain + squares -->
+      <div style="flex-shrink: 0">
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 2.2px; color: #A8935A; font-weight: 500">TERRAIN MARKS &amp; SQUARE STATES</div>
+        <div style="margin-top: 12px; display: flex; gap: 26px">
+
+          <div style="flex-shrink: 0; display: flex; gap: 10px">
+            <sc-for list="{{terrain}}" as="t" hint-placeholder-count="4">
+              <div style="text-align: center">
+                <div style="position: relative; width: 52px; height: 52px; background: {{t.bg}}; border: 1px solid #3E5566; display: flex; align-items: center; justify-content: center">
+                  <span style="position: absolute; left: 3px; top: 2px; font-size: 13px; line-height: 1; color: {{t.color}}; text-shadow: 0 1px 2px rgba(0,0,0,0.75)">{{t.mark}}</span>
+                </div>
+                <div style="margin-top: 6px; font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 1px; color: #8FA3B0">{{t.name}}</div>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="flex-grow: 1; display: flex; gap: 10px">
+            <sc-for list="{{squares}}" as="q" hint-placeholder-count="4">
+              <div style="text-align: center">
+                <div style="position: relative; width: 52px; height: 52px; background: {{q.bg}}; box-shadow: {{q.ring}}; border: 1px solid #3E5566; display: flex; align-items: center; justify-content: center">
+                  <sc-if value="{{q.hasPiece}}" hint-placeholder-val="{{true}}">
+                    <span style="font-size: 32px; line-height: 1; color: #F4EDDC; text-shadow: 0 1px 3px rgba(0,0,0,0.7)">{{q.glyph}}</span>
+                  </sc-if>
+                  <sc-if value="{{q.isHint}}" hint-placeholder-val="{{true}}">
+                    <span style="position: absolute; width: 11px; height: 11px; border-radius: 50%; background: rgba(12,20,28,0.5); border: 2px solid {{accent}}"></span>
+                  </sc-if>
+                </div>
+                <div style="margin-top: 6px; font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 1px; color: #8FA3B0">{{q.name}}</div>
+              </div>
+            </sc-for>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- components -->
+      <div style="flex-grow: 1; min-height: 0">
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 2.2px; color: #A8935A; font-weight: 500">CONTROLS</div>
+        <div style="margin-top: 12px; display: flex; gap: 26px; align-items: flex-start">
+
+          <div style="flex-shrink: 0; width: 210px; display: flex; flex-direction: column; gap: 9px">
+            <button type="button" style="height: 50px; border: none; border-radius: 3px; background: {{accent}}; color: #14202B; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2.2px; font-weight: 700; cursor: pointer">START MATCH</button>
+            <button type="button" style="height: 46px; border: 1px solid {{accent}}; border-radius: 3px; background: transparent; color: {{accent}}; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.8px; cursor: pointer">END &amp; READ THE LOG</button>
+            <button type="button" style="height: 46px; border: 1px solid #2E4A5E; border-radius: 3px; background: transparent; color: #C7D6E0; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.6px; cursor: pointer">BACK</button>
+          </div>
+
+          <div style="flex-shrink: 0; width: 220px">
+            <label for="sys-field" style="display: block; font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 2px; color: #8FA3B0">SESSION</label>
+            <input id="sys-field" type="text" placeholder="Playtest 01" style="margin-top: 7px; box-sizing: border-box; width: 100%; height: 50px; padding: 0 14px; background: #101E29; border: 1px solid #23394A; border-radius: 3px; color: #EDE4D0; font-family: 'EB Garamond', Georgia, serif; font-size: 18px; outline: none">
+            <div style="margin-top: 13px; display: flex; gap: 6px; flex-wrap: wrap">
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 8.5px; letter-spacing: 1.1px; padding: 3px 6px; border-radius: 2px; color: #F0A183; background: rgba(184,84,51,0.22)">MINE</span>
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 8.5px; letter-spacing: 1.1px; padding: 3px 6px; border-radius: 2px; color: #A8CE8C; background: rgba(110,130,87,0.24)">RIVER</span>
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 8.5px; letter-spacing: 1.1px; padding: 3px 6px; border-radius: 2px; color: #C7D6E0; background: rgba(90,120,142,0.22)">CAPTURE</span>
+            </div>
+          </div>
+
+          <div style="flex-grow: 1; min-width: 0">
+            <div style="display: flex; align-items: center; gap: 8px">
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 8.5px; letter-spacing: 1.6px; color: #8FA3B0">ACTIVE</span>
+              <span style="height: 34px; padding: 0 9px; display: flex; align-items: center; gap: 7px; border: 1px solid {{accent}}; border-radius: 2px; background: #1B2A1C">
+                <span style="font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 1.3px; color: {{accent}}; font-weight: 700">FOG OF WAR</span>
+                <span style="font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #C7D6E0">2&darr;</span>
+              </span>
+            </div>
+            <div style="margin-top: 11px; border-top: 1px solid #1B2D3B">
+              <div style="padding: 7px 0; display: flex; align-items: baseline; gap: 10px; background: rgba(200,164,76,0.07); border-bottom: 1px solid #16242F">
+                <span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #8FA3B0; width: 24px">4&hellip;</span>
+                <span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #EDE4D0">Bf8&times;c5</span>
+                <span style="font-family: 'JetBrains Mono', monospace; font-size: 8.5px; letter-spacing: 1.1px; padding: 2px 5px; border-radius: 2px; color: #F0A183; background: rgba(184,84,51,0.22)">MINE</span>
+                <span style="font-size: 14px; color: #8FA3B0; font-style: italic">lost the pawn</span>
+              </div>
+              <div style="padding: 7px 0; display: flex; align-items: baseline; gap: 10px">
+                <span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #8FA3B0; width: 24px">4.</span>
+                <span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #A9BAC6">d2&ndash;d4</span>
+              </div>
+            </div>
+            <p style="margin: 12px 0 0 0; font-size: 15px; color: #A9BAC6; line-height: 1.4">Every target is at least 44&thinsp;px tall. Nothing depends on colour alone &mdash; a flag carries its word, a square carries its ring.</p>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+</x-dc>
+
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#C8A44C","options":["#C8A44C","#B85433","#6E8257","#5B8CA8"],"section":"Theme"},"$preview":{"width":1180,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var A = this.props.accent || '#C8A44C';
+
+    var swatches = [
+      { name: 'Ink', hex: '#0A1219', use: 'the ground everything sits on' },
+      { name: 'Panel', hex: '#0D1A24', use: 'bars, cards, the bottom rail' },
+      { name: 'Field', hex: '#101E29', use: 'inputs and sheets' },
+      { name: 'Line', hex: '#23394A', use: 'hairlines and borders' },
+      { name: 'Brass', hex: '#C8A44C', use: 'the one accent — never two' },
+      { name: 'Parchment', hex: '#EDE4D0', use: 'what you read first' },
+      { name: 'Mist', hex: '#A9BAC6', use: 'second reading, prose' },
+      { name: 'Slate', hex: '#8FA3B0', use: 'labels and small caps' },
+      { name: 'Rust', hex: '#B85433', use: 'mines, refusals, damage' },
+      { name: 'Moss', hex: '#6E8257', use: 'terrain and villages' },
+      { name: 'River', hex: '#5B8CA8', use: 'water and cold effects' },
+      { name: 'Field light', hex: '#8A7B4E', use: 'the pale square' },
+      { name: 'Field dark', hex: '#57492B', use: 'the deep square' }
+    ];
+
+    var terrain = [
+      { name: 'MOUNTAIN', mark: '▲', color: '#CBBBA0', bg: '#8A7B4E' },
+      { name: 'RIVER', mark: '≈', color: '#7FB6D4', bg: '#57492B' },
+      { name: 'TRENCH', mark: '═', color: '#D08A63', bg: '#8A7B4E' },
+      { name: 'VILLAGE', mark: '⌂', color: '#9DC07A', bg: '#57492B' }
+    ];
+
+    var squares = [
+      { name: 'RESTING', bg: '#8A7B4E', ring: 'none', hasPiece: true, glyph: '♞︎', isHint: false },
+      { name: 'PICKED UP', bg: '#8A7B4E', ring: 'inset 0 0 0 3px ' + A, hasPiece: true, glyph: '♝︎', isHint: false },
+      { name: 'REACHABLE', bg: '#57492B', ring: 'none', hasPiece: false, glyph: '', isHint: true },
+      { name: 'JUST MOVED', bg: '#9C8A50', ring: 'none', hasPiece: true, glyph: '♟︎', isHint: false }
+    ];
+
+    return { accent: A, swatches: swatches, terrain: terrain, squares: squares };
+  }
+}
+</script>
+</body>
+</html>
