@@ -14,29 +14,32 @@ hand.
 
 ## What this is
 
-Infrastructure, not rules. The console records a match; it does not referee one.
+Infrastructure, not rules. The console runs the turn and keeps the record; it has
+no idea what your cards or your terrain actually do.
 
-Any piece can go to any square. Nothing is ever refused. Terrain, flags and cards
-are all carried on the record, and nothing reads them yet — that is what the rules
-layer will do once the rules exist.
+It holds you to ordinary chess — whose turn it is, and where a piece may go — with
+one clearly marked override for when a card or the terrain says otherwise. After
+every move it names what it saw and asks what happened. Terrain, flags and cards
+are carried on every record, and nothing reads them yet.
 
 ## What it does
 
 | | |
 |---|---|
-| **Two-tap move entry** | Tap the piece, tap the square. The move is logged. |
-| **Move hints** | Where ordinary chess would allow the piece to go — a guide for the eye, never a block. Toggleable. |
-| **Terrain marking** | Paint mountains, rivers, trenches and villages onto the grid from the printed map. Every move then records what it left and what it landed on. |
-| **Flags** | Nine one-tap tags — `MINE` `MOUNTAIN` `RIVER` `TRENCH` `VILLAGE` `CARD` `REFUSED` `CHECK` `CAPTURE` — plus a free note. |
-| **Cards in play** | A name, a scope and a countdown. Ticks down one step per move, drops off by itself. |
-| **Undo** | Replays the whole match from the opening position, so the board and the record cannot drift apart. |
+| **Two-tap move entry** | Tap the piece, tap the square. Only the side to move can be picked up; the other side's pieces sit back a shade. Only squares chess allows are accepted. |
+| **Break the rule** | One tap lifts the restriction for a single move, and that move is logged as `OVERRIDE`. |
+| **It asks after every move** | The band names the move and the terrain it landed on, then five plain buttons — Mine, Terrain event, Card played, Move refused, Check — and a free note. One tap ends the turn. |
+| **Terrain** | Marking it is the opening step of a match. Marked squares are tinted and carry an icon, with a legend under the board at all times. |
+| **Card shelf** | Name your cards once at setup, then tap to play one. Each carries a countdown that ticks a step per move and drops off by itself. |
+| **Undo** | Replays the match from the opening position, so the board and the record cannot drift apart. |
 | **Export** | The full log as readable text or as JSON, copied to the clipboard. |
 | **Autosave** | Best-effort to `localStorage`, so a dropped phone does not cost you the match. |
 
 ## What it deliberately does not do
 
-No legality checks. No check or checkmate. No castling in one tap (log the king,
-then the rook). No en passant. No per-player chess clock. No sensors, no Bluetooth.
+No check or checkmate detection. No castling in one tap (log the king, then the
+rook). No en passant. No per-player chess clock. No sensors, no Bluetooth. And
+nothing anywhere knows what a card or a terrain type does.
 
 ## Layout
 
@@ -88,8 +91,9 @@ Four sockets, all wired, none live:
 1. **Terrain → movement.** Which terrain changes which piece, and by how much.
 2. **Minefields.** How mines are placed, who sees them, what happens on contact.
 3. **Cards.** Where a card comes from, what it does, whether a player holds a hand.
-4. **Refusals.** Whether the finished game blocks an illegal move or, as here,
-   logs it and moves on.
+4. **Hidden information.** Whether mines, cards in hand or anything else stay
+   secret from the opponent. One shared screen cannot keep a secret, so this is
+   what decides whether the game needs a screen per player.
 
 ## Design
 

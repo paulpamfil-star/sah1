@@ -89,23 +89,10 @@ body { margin: 0; background: #0A1219; }
           </div>
         </div>
 
-        <div style="flex-shrink: 0; height: 46px; display: flex; border-top: 1px solid #23394A; background: #0D1A24">
-          <div style="flex-grow: 1; border-right: 1px solid #1B2D3B; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #C7D6E0">
-            <span style="font-size: 13px; line-height: 1">&#8630;</span>
-            <span style="font-family: 'JetBrains Mono', monospace; font-size: 6.5px; letter-spacing: 1.1px">UNDO</span>
-          </div>
-          <div style="flex-grow: 1; border-right: 1px solid #1B2D3B; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #C7D6E0">
-            <span style="font-size: 13px; line-height: 1">&#9873;</span>
-            <span style="font-family: 'JetBrains Mono', monospace; font-size: 6.5px; letter-spacing: 1.1px">FLAG</span>
-          </div>
-          <div style="flex-grow: 1; border-right: 1px solid #1B2D3B; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #C7D6E0">
-            <span style="font-size: 11px; line-height: 1">&#9670;</span>
-            <span style="font-family: 'JetBrains Mono', monospace; font-size: 6.5px; letter-spacing: 1.1px">CARD</span>
-          </div>
-          <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #C7D6E0">
-            <span style="font-size: 13px; line-height: 1">&#8943;</span>
-            <span style="font-family: 'JetBrains Mono', monospace; font-size: 6.5px; letter-spacing: 1.1px">MORE</span>
-          </div>
+        <div style="flex-shrink: 0; height: 40px; display: flex; border-top: 1px solid #23394A; background: #0D1A24">
+          <div style="flex-grow: 1; border-right: 1px solid #1B2D3B; display: flex; align-items: center; justify-content: center; color: #C7D6E0; font-size: 14px">Undo</div>
+          <div style="flex-grow: 1; border-right: 1px solid #1B2D3B; display: flex; align-items: center; justify-content: center; color: #C7D6E0; font-size: 14px">Cards</div>
+          <div style="flex-grow: 1; display: flex; align-items: center; justify-content: center; color: #C7D6E0; font-size: 14px">More</div>
         </div>
 
       </div>
@@ -131,12 +118,12 @@ body { margin: 0; background: #0A1219; }
 
       <div style="display: flex; gap: 13px">
         <span style="flex-shrink: 0; width: 21px; height: 21px; border-radius: 50%; border: 1px solid {{accent}}; color: {{accent}}; font-family: 'JetBrains Mono', monospace; font-size: 10px; display: flex; align-items: center; justify-content: center">3</span>
-        <p style="margin: 0; font-size: 17px; line-height: 1.45; color: #C7D6E0"><span style="color: #EDE4D0">The board, in two taps.</span> Tap the piece you just moved on the wood, then the square it landed on. Any piece can go anywhere &mdash; the console never refuses a move, because your rules will be the ones deciding that.</p>
+        <p style="margin: 0; font-size: 17px; line-height: 1.45; color: #C7D6E0"><span style="color: #EDE4D0">The board, in two taps.</span> Tap the piece you moved on the wood, then the square it landed on. Only the side to move can be picked up, and the other side&#39;s pieces sit back a shade so whose go it is is never in doubt.</p>
       </div>
 
       <div style="display: flex; gap: 13px">
         <span style="flex-shrink: 0; width: 21px; height: 21px; border-radius: 50%; border: 1px solid {{accent}}; color: {{accent}}; font-family: 'JetBrains Mono', monospace; font-size: 10px; display: flex; align-items: center; justify-content: center">4</span>
-        <p style="margin: 0; font-size: 17px; line-height: 1.45; color: #C7D6E0"><span style="color: #EDE4D0">Gold ring, and the dots.</span> The ring is the piece you picked up. The dots are where ordinary chess would let it go &mdash; a guide for the eye while you learn the terrain, switched off under More.</p>
+        <p style="margin: 0; font-size: 17px; line-height: 1.45; color: #C7D6E0"><span style="color: #EDE4D0">Break the rule.</span> The ring is the piece in your hand, the dots are where chess lets it go, and nothing else is accepted. When a card or the terrain overrides that, tap <span style="color: #F0A183">Break the rule</span> and the restriction lifts for one move &mdash; logged as OVERRIDE.</p>
       </div>
 
       <div style="display: flex; gap: 13px">
@@ -151,7 +138,7 @@ body { margin: 0; background: #0A1219; }
 
       <div style="display: flex; gap: 13px">
         <span style="flex-shrink: 0; width: 21px; height: 21px; border-radius: 50%; border: 1px solid {{accent}}; color: {{accent}}; font-family: 'JetBrains Mono', monospace; font-size: 10px; display: flex; align-items: center; justify-content: center">7</span>
-        <p style="margin: 0; font-size: 17px; line-height: 1.45; color: #C7D6E0"><span style="color: #EDE4D0">The record, newest at the top.</span> Flags and a note sit beside the move. Undo replays the whole match from the opening position, so the board and the record can never drift apart.</p>
+        <p style="margin: 0; font-size: 17px; line-height: 1.45; color: #C7D6E0"><span style="color: #EDE4D0">After every move, it asks.</span> The band names the move and the terrain it landed on, then five plain buttons &mdash; Mine, Terrain event, Card played, Move refused, Check &mdash; and a note. One tap ends the turn, and the record builds underneath, newest first.</p>
       </div>
 
     </div>
