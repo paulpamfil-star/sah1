@@ -12,7 +12,7 @@ hand.
 **On Claude:** https://claude.ai/artifact/WgKas38sCShyM9tB1bfT6B — same app, Claude's own store
 **Design canvas (reference boards):** https://claude.ai/artifact/J12hreb7yw5R3K8VjcDCpG
 
-One `docs/index.html` serves both, with two backends behind one seam. Inside a
+One file serves both, with two backends behind one seam. Inside a
 Claude artifact it uses the artifact's own document store. Served as a plain page
 it uses Supabase. Nothing else in the app knows the difference.
 
@@ -26,7 +26,7 @@ SQL Editor → New query → paste → Run. It creates the `matches` table, turn
 level security with the playtest policies, and adds the table to the realtime
 publication.
 
-The project URL and publishable key sit in `docs/index.html` in plain sight. That
+The project URL and publishable key sit in `index.html` in plain sight. That
 is what a publishable key is for; it ships in client code by design and RLS is
 what actually guards the rows. The **secret** key never goes anywhere near this
 repository.
@@ -79,22 +79,25 @@ live: every move, flag, card and terrain mark appears on both phones at once.
 Each phone shows the board from its own player's side and will only let that
 player move — your opponent's pieces sit back a shade and refuse the tap.
 
-The pairing runs on the artifact's shared document store: one document per match
-at `matches/<CODE>`, with both phones subscribed to it. The joining phone takes
-its seat under a short lease, so two people entering the same code cannot both
-claim White.
+The pairing is one row per match, keyed by the code, with both phones watching
+it. On the public link that row lives in Supabase; inside a Claude artifact it
+lives in the artifact's own store. Whichever it is, every write carries a rising
+`rev` and the writer's tag, so a phone can tell its own echo from the other
+player's move.
 
-**What two-phone play requires.** Both players must be signed in to the same
-Claude workspace and opening the same shared link. A page with a shared store is
-organization-internal and cannot be opened by a public link — that is a platform
-rule, not a setting. If the second player cannot be added to the workspace, the
-one-phone path is the whole game and loses nothing except the per-player view.
+**What two-phone play requires.** On the public link: nothing. No account, no
+workspace — anyone you send the URL to can be the second phone. (Inside a Claude
+artifact both players must be signed in to the same Claude workspace, which is
+why the public link is the one to share.)
 
 ## Layout
 
 ```
-docs/
-  index.html         the console — one phone or two, the thing you actually use
+index.html           the console — one phone or two, the thing you actually use
+docs/index.html      the same file, so Pages serves it whichever folder it is set to
+
+test/two-screens/    drives the real app in two browser windows and plays a few
+                     moves between them — see its README for what that proves
 
 canvas/project/
   canvas.json        the canvas index — frames, order, notes
@@ -104,8 +107,9 @@ canvas/project/
   System.dc.html     palette, type, terrain marks, controls
 ```
 
-`docs/index.html` is the live app. The canvas holds the design reference — the
-control-by-control breakdown, the data contract, and the visual language.
+`index.html` is the live app, and `docs/index.html` is a copy of it so the site
+serves either way. The canvas holds the design reference — the control-by-control
+breakdown, the data contract, and the visual language.
 
 ## The record
 

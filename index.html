@@ -681,7 +681,10 @@
     if (!Net.ready) return;
     Net.watch(code, function (d) {
       var hadCards = M.cards ? M.cards.length : 0;
+      var hadTurn = M.turn;
       M = d;
+      // whatever we were told off for is no longer the situation
+      if (M.turn !== hadTurn) { L.say = ""; L.sel = null; }
       if (!M.barrier) M.barrier = [];
       if (!M.fallen) M.fallen = [];
       if (!M.cards) M.cards = [];
@@ -1352,18 +1355,18 @@
       if (lm.captured) bits.push("Took a " + lm.captured + ".");
       if (lm.terrainTo) bits.push("Landed on " + (TBY[lm.terrainTo] ? TBY[lm.terrainTo].name.toLowerCase() : lm.terrainTo) + ".");
       if (!bits.length) bits.push("Quiet square.");
-      return { title: cap(lm.piece) + " " + lm.from + " → " + lm.to, say: bits.join(" "), meta: "Move " + lm.no, active: true, ov: false };
+      return { title: cap(lm.piece) + " " + lm.from + " → " + lm.to, say: L.say || bits.join(" "), meta: "Move " + lm.no, active: true, ov: false };
     }
     if (L.sel !== null && M.board[L.sel]) {
       return {
         title: cap(PNAME[M.board[L.sel].t]) + " on " + sqName(L.sel),
-        say: L.override ? "Rule off — tap any square." : "Tap where it went.",
+        say: L.say || (L.override ? "Rule off — tap any square." : "Tap where it went."),
         meta: "Move " + M.moveNo, active: false, ov: true
       };
     }
     return {
       title: sideName(M.turn) + " to move",
-      say: myTurn() ? "Move the piece on the board, then tap it here." : "Waiting for the other phone.",
+      say: L.say || (myTurn() ? "Move the piece on the board, then tap it here." : "Waiting for the other phone."),
       meta: "Move " + M.moveNo, active: false, ov: false
     };
   }
