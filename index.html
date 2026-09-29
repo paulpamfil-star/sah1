@@ -1,0 +1,1856 @@
+<title>Chess The Origins Console</title>
+<style>
+  /* Apple HIG shape on the game's own field: a fixed material bar, a content
+     column that scrolls under it, a material dock. Type on the iOS Dynamic
+     Type ladder — nothing below 11pt, body at 17. */
+  :root {
+    /* ground + content layers (primary / secondary / tertiary) */
+    --bg: #0B1017;
+    --bg-2: #131A23;
+    --bg-3: #1B242F;
+    --sep: rgba(235,236,240,.14);
+    --sep-strong: rgba(235,236,240,.24);
+
+    /* labels: primary / secondary / tertiary */
+    --fg: #F2F2F7;
+    --fg-2: rgba(235,236,240,.68);
+    --fg-3: rgba(235,236,240,.44);
+
+    /* accent + semantic */
+    --accent: #D8B45A;
+    --accent-press: #B8963F;
+    --on-accent: #17202B;
+    --red: #FF6B5A;
+    --green: #6FD08C;
+    --blue: #64B6F7;
+
+    /* the board's own world */
+    --sq-light: #8F8052;
+    --sq-dark: #5A4C2E;
+    --sq-light-hot: #A28F55;
+    --sq-dark-hot: #6D5B33;
+    --piece-w: #F6F0E0;
+    --piece-b: #141F29;
+
+    --ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Segoe UI", Roboto, sans-serif;
+    --voice: ui-serif, "New York", Georgia, "Times New Roman", serif;
+    --num: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+
+    --r-sm: 8px;
+    --r-md: 12px;
+    --r-lg: 16px;
+    --r-xl: 22px;
+
+    --ease: cubic-bezier(.32, .72, 0, 1);
+    color-scheme: dark;
+  }
+
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--ui);
+    font-size: 17px;
+    line-height: 1.32;
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none;
+  }
+  * { box-sizing: border-box; }
+  button { font-family: inherit; color: inherit; font-size: 17px; cursor: pointer; }
+  input { font-family: inherit; font-size: 17px; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+
+  /* It is a phone app. On a wider screen it stays a phone-shaped column
+     rather than stretching the board and the legend across the desk. */
+  .app {
+    height: 100%; width: 100%; max-width: 520px; margin: 0 auto;
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  @media (min-width: 560px) {
+    body { background: #05080C; }
+    .app { border-left: 1px solid var(--sep); border-right: 1px solid var(--sep); background: var(--bg); }
+  }
+
+  /* ── type ladder ─────────────────────────────────────────── */
+  .t-large  { font-size: 34px; line-height: 1.06; font-weight: 700; letter-spacing: -.4px; }
+  .t-title  { font-size: 28px; line-height: 1.1;  font-weight: 700; letter-spacing: -.3px; }
+  .t-title2 { font-size: 22px; line-height: 1.15; font-weight: 600; letter-spacing: -.2px; }
+  .t-head   { font-size: 17px; line-height: 1.3;  font-weight: 600; }
+  .t-body   { font-size: 17px; line-height: 1.38; font-weight: 400; }
+  .t-sub    { font-size: 15px; line-height: 1.35; font-weight: 400; color: var(--fg-2); }
+  .t-foot   { font-size: 13px; line-height: 1.3;  font-weight: 400; color: var(--fg-2); }
+  .t-cap    { font-size: 12px; line-height: 1.25; font-weight: 500; color: var(--fg-2); }
+  .t-cap2   { font-size: 11px; line-height: 1.2;  font-weight: 500; color: var(--fg-3); }
+  .voice    { font-family: var(--voice); }
+  .num      { font-family: var(--num); font-variant-numeric: tabular-nums; }
+  .caps     { text-transform: uppercase; letter-spacing: .6px; }
+
+  /* ── materials ───────────────────────────────────────────── */
+  .material {
+    background: rgba(19, 26, 35, .74);
+    backdrop-filter: blur(22px) saturate(180%);
+    -webkit-backdrop-filter: blur(22px) saturate(180%);
+  }
+
+  /* ── controls ────────────────────────────────────────────── */
+  .btn {
+    min-height: 50px; width: 100%; border: none; border-radius: var(--r-md);
+    background: var(--accent); color: var(--on-accent);
+    font-size: 17px; font-weight: 600;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    transition: transform .1s var(--ease), background-color .15s var(--ease), opacity .15s;
+  }
+  .btn:active { transform: scale(.975); background: var(--accent-press); }
+  .btn.plain { background: var(--bg-3); color: var(--fg); }
+  .btn.plain:active { background: #26313E; }
+  .btn.tinted { background: rgba(216,180,90,.16); color: var(--accent); }
+  .btn.destructive { background: rgba(255,107,90,.16); color: var(--red); }
+  .btn.destructive:active { background: rgba(255,107,90,.28); }
+  .btn:disabled { opacity: .35; }
+  .btn:disabled:active { transform: none; }
+
+  .field {
+    width: 100%; min-height: 50px; padding: 13px 15px;
+    background: var(--bg-2); border: 1px solid var(--sep); border-radius: var(--r-md);
+    color: var(--fg); outline: none;
+  }
+  .field::placeholder { color: var(--fg-3); }
+  .field:focus { border-color: var(--accent); }
+
+  .stack { display: flex; flex-direction: column; }
+
+  /* ── page (setup / pairing) ──────────────────────────────── */
+  .page { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 0 20px; padding-block: 28px 28px; }
+  .page > * + * { margin-top: 16px; }
+  .brandmark { font-size: 12px; font-weight: 700; letter-spacing: 3px; color: var(--accent); }
+
+  .row {
+    width: 100%; min-height: 64px; padding: 14px 16px; text-align: left;
+    background: var(--bg-2); border: 1px solid var(--sep); border-radius: var(--r-md);
+    display: flex; gap: 14px; align-items: center;
+    transition: transform .1s var(--ease), background-color .15s;
+  }
+  .row:active { transform: scale(.985); background: var(--bg-3); }
+  .row .lead { width: 30px; flex: 0 0 auto; display: flex; align-items: center; justify-content: center; color: var(--accent); }
+  .row .mid { flex: 1; min-width: 0; }
+  .row .chev { flex: 0 0 auto; color: var(--fg-3); }
+
+  .codecard {
+    padding: 26px 20px; text-align: center;
+    background: var(--bg-2); border: 1px solid rgba(216,180,90,.4); border-radius: var(--r-lg);
+  }
+  .codecard .v {
+    font-family: var(--num); font-size: clamp(44px, 17vw, 64px); font-weight: 700;
+    letter-spacing: 14px; color: var(--accent); line-height: 1.05; padding-left: 14px;
+  }
+  .codefield {
+    width: 100%; height: 76px; text-align: center;
+    font-family: var(--num); font-size: 38px; font-weight: 600; letter-spacing: 16px; padding-left: 16px;
+    background: var(--bg-2); border: 1px solid var(--sep); border-radius: var(--r-md);
+    color: var(--fg); outline: none; text-transform: uppercase;
+  }
+  .codefield:focus { border-color: var(--accent); }
+
+  .sides { display: flex; gap: 10px; }
+  .sides button {
+    flex: 1; min-height: 88px; border-radius: var(--r-md);
+    background: var(--bg-2); border: 1px solid var(--sep);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+    transition: transform .1s var(--ease);
+  }
+  .sides button:active { transform: scale(.975); }
+  .sides button[aria-pressed="true"] { border-color: var(--accent); background: rgba(216,180,90,.12); }
+  .sides .g { font-size: 30px; line-height: 1; }
+
+  .callout {
+    padding: 14px 16px; border-radius: var(--r-md);
+    background: rgba(255,107,90,.12); border: 1px solid rgba(255,107,90,.3); color: #FFB3A8;
+  }
+
+  /* ── match chrome ────────────────────────────────────────── */
+  .topbar {
+    flex: 0 0 auto; min-height: 48px; padding: 0 16px;
+    padding-top: env(safe-area-inset-top, 0px);
+    display: flex; align-items: center; gap: 10px;
+    border-bottom: 1px solid var(--sep); z-index: 5;
+  }
+  .topbar .sess { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 5px; flex: 0 0 auto;
+    padding: 3px 9px; border-radius: 999px; background: var(--bg-3);
+  }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--fg-3); flex: 0 0 auto; }
+  .dot.on { background: var(--green); }
+
+  .band { flex: 0 0 auto; padding: 14px 16px; border-bottom: 1px solid var(--sep); }
+  .band.active { background: var(--bg-2); }
+  .band .r1 { display: flex; align-items: center; gap: 10px; }
+  .band .turnmark { width: 14px; height: 14px; border-radius: 50%; flex: 0 0 auto; border: 1.5px solid var(--fg-3); }
+  .band h2 { margin: 0; flex: 1; min-width: 0; font-family: var(--voice); font-size: clamp(21px, 6.2vw, 26px); font-weight: 600; line-height: 1.12; letter-spacing: -.2px; }
+  .band .r2 { margin-top: 7px; display: flex; align-items: center; gap: 12px; }
+  .band .say { flex: 1; min-width: 0; font-size: 15px; line-height: 1.35; color: var(--fg-2); }
+  .band .say.alert { color: #FFB3A8; }
+
+  .tag-btn {
+    flex: 0 0 auto; min-height: 44px; padding: 0 14px; border-radius: 999px;
+    background: rgba(255,107,90,.14); border: none; color: var(--red);
+    font-size: 13px; font-weight: 600;
+    transition: transform .1s var(--ease);
+  }
+  .tag-btn:active { transform: scale(.95); }
+  .tag-btn.on { background: var(--red); color: #fff; }
+  .tag-btn.gold { background: rgba(216,180,90,.16); color: var(--accent); }
+
+  /* ── board ───────────────────────────────────────────────── */
+  .boardzone { flex: 0 0 auto; padding: 12px 16px 6px; display: flex; gap: 6px; justify-content: center; }
+  .ranks { display: flex; flex-direction: column; width: 14px; flex: 0 0 auto; }
+  .ranks div { flex: 1; display: flex; align-items: center; justify-content: center; }
+  /* the board never grows so tall that it pushes the dock off the screen */
+  .boardcol { width: 100%; max-width: min(372px, 44vh); }
+  .board {
+    display: grid; grid-template-columns: repeat(8, minmax(0, 1fr));
+    border-radius: var(--r-sm); overflow: hidden; border: 1px solid var(--sep-strong);
+  }
+  .sq {
+    position: relative; aspect-ratio: 1; padding: 0; margin: 0; border: none;
+    display: flex; align-items: center; justify-content: center; background: var(--sq-dark);
+    transition: background-color .15s;
+  }
+  .sq.lt { background: var(--sq-light); }
+  .sq.hot { background: var(--sq-dark-hot); }
+  .sq.lt.hot { background: var(--sq-light-hot); }
+  .sq.sel::after {
+    content: ""; position: absolute; inset: 0; box-shadow: inset 0 0 0 3.5px var(--accent);
+  }
+  .sq.target::after {
+    content: ""; position: absolute; inset: 0; box-shadow: inset 0 0 0 3.5px var(--blue);
+  }
+  .sq .tint { position: absolute; inset: 0; }
+  .sq .tmark { position: absolute; left: 3px; top: 2px; font-size: 13px; line-height: 1; text-shadow: 0 1px 3px rgba(0,0,0,.9); }
+  .sq .pc { position: relative; font-size: clamp(23px, 7.4vw, 31px); line-height: 1; }
+  .sq .pc.w { color: var(--piece-w); text-shadow: 0 1px 3px rgba(0,0,0,.75); }
+  .sq .pc.b { color: var(--piece-b); text-shadow: 0 1px 2px rgba(246,240,224,.32); }
+  .sq .pc.muted { opacity: .78; }
+  .sq .pc.stuck { opacity: .5; filter: saturate(.3); }
+  .sq .dotmark { position: absolute; width: 27%; height: 27%; border-radius: 50%; background: rgba(11,16,23,.42); border: 2.5px solid var(--accent); }
+  .sq .water { position: absolute; inset: 0; background: rgba(60,130,190,.62); }
+  .sq .water::after {
+    content: ""; position: absolute; inset: 0;
+    background: repeating-linear-gradient(135deg, rgba(255,255,255,.16) 0 3px, transparent 3px 7px);
+  }
+  .files { display: flex; }
+  .files div { flex: 1; min-height: 18px; display: flex; align-items: center; justify-content: center; }
+
+  /* ── legend + rail ───────────────────────────────────────── */
+  .legend { flex: 0 0 auto; padding: 2px 16px 8px; display: flex; gap: 6px; }
+  .legend div { flex: 1; min-width: 0; min-height: 26px; border-radius: var(--r-sm); display: flex; align-items: center; justify-content: center; gap: 5px; }
+
+  .rail { flex: 0 0 auto; padding: 0 16px 10px; display: flex; align-items: center; gap: 10px; min-height: 44px; }
+  .rail .strip { flex: 1; min-width: 0; display: flex; gap: 8px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .rail .strip::-webkit-scrollbar { display: none; }
+  .chipcard {
+    flex: 0 0 auto; min-height: 36px; padding: 0 12px; border-radius: 999px;
+    background: rgba(216,180,90,.15); border: 1px solid rgba(216,180,90,.42);
+    display: flex; align-items: center; gap: 8px;
+    transition: transform .1s var(--ease);
+  }
+  .chipcard:active { transform: scale(.95); }
+  .chipcard .nm { font-size: 13px; font-weight: 600; color: var(--accent); }
+  .chipcard .lf { font-family: var(--num); font-size: 12px; color: var(--fg-2); }
+
+  /* ── pane ────────────────────────────────────────────────── */
+  .pane { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; border-top: 1px solid var(--sep); }
+  .pane.ask { background: var(--bg-2); border-top-color: rgba(216,180,90,.45); padding: 14px 16px 18px; }
+  .pane .empty { padding: 18px 16px; color: var(--fg-3); }
+
+  .mv { padding: 9px 16px; display: flex; align-items: baseline; gap: 11px; border-bottom: 1px solid var(--sep); }
+  .mv.newest { background: rgba(216,180,90,.07); }
+  .mv .no { font-family: var(--num); font-size: 12px; color: var(--fg-3); width: 28px; flex: 0 0 auto; }
+  .mv .san { font-family: var(--num); font-size: 15px; color: var(--fg-2); flex: 0 0 auto; }
+  .mv.newest .san { color: var(--fg); font-weight: 600; }
+  .mv .meta { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; gap: 5px; align-items: baseline; }
+  .badge { font-size: 11px; font-weight: 600; letter-spacing: .4px; padding: 3px 7px; border-radius: 999px; }
+  .badge.red { color: #FFB3A8; background: rgba(255,107,90,.2); }
+  .badge.gold { color: var(--accent); background: rgba(216,180,90,.18); }
+  .badge.grey { color: var(--fg-2); background: rgba(235,236,240,.12); }
+  .badge.green { color: var(--green); background: rgba(111,208,140,.16); }
+  .mv .said { font-size: 13px; color: var(--fg-3); font-style: italic; }
+
+  .askgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; margin-top: 11px; }
+  .askgrid button {
+    min-height: 52px; border-radius: var(--r-md); background: var(--bg-3);
+    border: 1px solid var(--sep); font-size: 16px;
+    transition: transform .1s var(--ease);
+  }
+  .askgrid button:active { transform: scale(.97); }
+  .askgrid button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 600; }
+  .askgrid button.warn[aria-pressed="true"] { background: var(--red); border-color: var(--red); color: #fff; }
+
+  /* ── dock ────────────────────────────────────────────────── */
+  .dock {
+    flex: 0 0 auto; display: flex; border-top: 1px solid var(--sep);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .dock button {
+    flex: 1; min-height: 56px; background: transparent; border: none;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+    font-size: 12px; font-weight: 500; color: var(--fg-2);
+    transition: transform .1s var(--ease), color .15s;
+  }
+  .dock button:active { transform: scale(.94); color: var(--fg); }
+  .dock button:disabled { color: var(--fg-3); }
+  .dock .ic { font-size: 19px; line-height: 1; }
+
+  /* ── sheet ───────────────────────────────────────────────── */
+  .scrim {
+    position: fixed; inset: 0; z-index: 40; background: rgba(0,0,0,.5);
+    display: flex; flex-direction: column; justify-content: flex-end;
+    animation: fade .22s var(--ease);
+  }
+  .scrim > .dismiss { flex: 1; background: transparent; border: none; }
+  .sheet {
+    flex: 0 0 auto; background: var(--bg-2); border-radius: var(--r-xl) var(--r-xl) 0 0;
+    padding: 10px 20px 20px; padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+    max-height: 82vh; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    animation: rise .34s var(--ease);
+  }
+  .grabber { width: 38px; height: 5px; border-radius: 3px; background: var(--sep-strong); margin: 0 auto 14px; }
+  .sheet > * + * { margin-top: 14px; }
+  @keyframes rise { from { transform: translateY(100%); } to { transform: none; } }
+  @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+
+  .deck { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .deckcard {
+    min-height: 116px; padding: 14px 12px; border-radius: var(--r-md);
+    background: var(--bg-3); border: 1px solid var(--sep); text-align: left;
+    display: flex; flex-direction: column; gap: 6px;
+    transition: transform .1s var(--ease);
+  }
+  .deckcard:active { transform: scale(.97); }
+  .deckcard .cn { font-family: var(--voice); font-size: 17px; font-weight: 600; line-height: 1.15; }
+  .deckcard .cr { font-size: 11px; font-weight: 600; letter-spacing: .5px; color: var(--accent); text-transform: uppercase; }
+  .deckcard .cd { font-size: 12px; color: var(--fg-2); line-height: 1.3; }
+
+  .stepper { display: flex; align-items: center; gap: 12px; }
+  .stepper button { width: 56px; min-height: 56px; border-radius: var(--r-md); background: var(--bg-3); border: 1px solid var(--sep); font-size: 24px; }
+  .stepper button:active { transform: scale(.94); }
+  .stepper .v { flex: 1; text-align: center; font-family: var(--num); font-size: 22px; font-weight: 600; }
+
+  .menurow {
+    width: 100%; min-height: 60px; padding: 12px 16px; margin: 0;
+    display: flex; align-items: center; gap: 14px; text-align: left;
+    background: var(--bg-3); border: 1px solid var(--sep); border-radius: var(--r-md);
+    transition: transform .1s var(--ease);
+  }
+  .menurow:active { transform: scale(.985); }
+  .menurow .ic { width: 28px; flex: 0 0 auto; text-align: center; font-size: 18px; color: var(--accent); }
+  .menurow .mid { flex: 1; min-width: 0; }
+  .switch { width: 50px; height: 30px; border-radius: 999px; background: var(--sep-strong); display: flex; align-items: center; padding: 2px; flex: 0 0 auto; transition: background-color .2s var(--ease); }
+  .switch.on { background: var(--green); justify-content: flex-end; }
+  .switch i { width: 26px; height: 26px; border-radius: 50%; background: #fff; display: block; }
+
+  .terrbar { flex: 0 0 auto; display: flex; gap: 7px; padding: 10px 16px; border-bottom: 1px solid var(--sep); }
+  .terrbar button {
+    flex: 1; min-height: 54px; border-radius: var(--r-md); background: var(--bg-2); border: 1px solid var(--sep);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+    transition: transform .1s var(--ease);
+  }
+  .terrbar button:active { transform: scale(.96); }
+
+  /* ── card reveal ─────────────────────────────────────────── */
+  .reveal {
+    position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center;
+    padding: 24px; background: rgba(6,9,13,.82);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    animation: fade .2s var(--ease);
+  }
+  .bigcard {
+    width: min(100%, 320px); border-radius: var(--r-xl); padding: 28px 24px 24px;
+    text-align: center; border: 1px solid rgba(216,180,90,.55);
+    background: linear-gradient(170deg, #1E2733 0%, #141C25 100%);
+    box-shadow: 0 30px 70px rgba(0,0,0,.6);
+    animation: dealIn .55s var(--ease);
+  }
+  .bigcard.light { background: linear-gradient(170deg, #F4F1E8 0%, #E3DCCA 100%); border-color: rgba(88,72,30,.5); color: #1C232C; }
+  .bigcard .mark {
+    width: 62px; height: 62px; border-radius: 50%; margin: 0 auto 16px;
+    background: var(--accent); color: var(--on-accent);
+    display: flex; align-items: center; justify-content: center; font-size: 27px;
+  }
+  .bigcard .ro { font-size: 12px; font-weight: 700; letter-spacing: 2.4px; color: var(--accent); text-transform: uppercase; }
+  .bigcard.light .ro { color: #7A5F1E; }
+  .bigcard .en { font-family: var(--voice); font-size: 30px; font-weight: 600; line-height: 1.1; margin-top: 8px; letter-spacing: -.2px; }
+  .bigcard .txt { font-size: 16px; line-height: 1.4; color: var(--fg-2); margin-top: 14px; }
+  .bigcard.light .txt { color: #46505C; }
+  .bigcard .dur { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--sep); font-family: var(--num); font-size: 13px; color: var(--accent); }
+  .bigcard.light .dur { border-top-color: rgba(28,35,44,.18); color: #7A5F1E; }
+  @keyframes dealIn {
+    from { transform: translateY(26px) scale(.88) rotate(-3deg); opacity: 0; }
+    to   { transform: none; opacity: 1; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+    .btn:active, .row:active, .sq, .dock button:active { transform: none !important; }
+  }
+</style>
+
+<div class="app" id="app"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  var GLYPH = { k: "♚︎", q: "♛︎", r: "♜︎", b: "♝︎", n: "♞︎", p: "♟︎" };
+  var PNAME = { k: "king", q: "queen", r: "rook", b: "bishop", n: "knight", p: "pawn" };
+  var PLETTER = { k: "K", q: "Q", r: "R", b: "B", n: "N", p: "" };
+  var CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+
+  var TERRAIN = [
+    { id: "river", short: "River", name: "RIVER", mark: "≈", color: "#BFE2F5", tint: "rgba(60,135,180,.44)" },
+    { id: "trench", short: "Trench", name: "TRENCH", mark: "═", color: "#F3C3A8", tint: "rgba(168,78,44,.42)" },
+    { id: "village", short: "Village", name: "VILLAGE", mark: "⌂", color: "#D3EBBA", tint: "rgba(104,148,72,.42)" },
+    { id: "swampland", short: "Swamp", name: "SWAMP", mark: "░", color: "#C9BDA0", tint: "rgba(120,106,66,.5)" },
+    { id: "erase", short: "Clear", name: "CLEAR", mark: "×", color: "#EBECF0", tint: "transparent" }
+  ];
+  var TBY = {}; TERRAIN.forEach(function (t) { TBY[t.id] = t; });
+
+  // The deck, as Paul and Anca wrote it. The mountain card is deliberately absent.
+  var DECK = [
+    {
+      id: "river", ro: "Râu", en: "The River", dur: 3, kind: "barrier", jumpable: true,
+      text: "A run of three or four squares floods. No piece may enter or cross it — only knights jump over."
+    },
+    {
+      id: "flood", ro: "Râu inundat", en: "Flooded River", dur: 2, kind: "barrier", jumpable: false,
+      text: "The water rises. Nothing crosses the river line, knights included."
+    },
+    {
+      id: "wind", ro: "Vânt", en: "Wind", dur: 1, kind: "pick", pickText: "Tap the piece the wind takes.",
+      text: "One piece is pushed a square downwind. If that square is taken or off the board, it stays put."
+    },
+    {
+      id: "trench", ro: "Cădere în tranșeu", en: "Trench Collapse", dur: 1, kind: "pick", noKing: true,
+      pickText: "Tap the piece that falls in.",
+      text: "The ground gives way and that piece leaves the board for good. Never the king."
+    },
+    {
+      id: "revive", ro: "Înviere", en: "Revival", dur: 1, kind: "revive",
+      text: "One fallen piece comes back. Choose which, then choose an empty square for it."
+    },
+    {
+      id: "frost", ro: "Ger", en: "Frost", dur: 3, kind: "global",
+      text: "The horses die. For three turns the knights walk — they move as pawns."
+    },
+    {
+      id: "swamp", ro: "Mlaștină", en: "Swamp", dur: 1, kind: "pick", pickText: "Tap the piece that gets mired.",
+      text: "One piece is stuck fast. It cannot move while the mud holds it."
+    }
+  ];
+  var CARD_BY = {}; DECK.forEach(function (c) { CARD_BY[c.id] = c; });
+
+  var RESOLVE = [
+    { tag: "MINE", label: "Mine", warn: true },
+    { tag: "TERRAIN", label: "Terrain event", warn: false },
+    { tag: "CARD", label: "Card played", warn: false },
+    { tag: "REFUSED", label: "Move refused", warn: true },
+    { tag: "CHECK", label: "Check", warn: false }
+  ];
+
+  var WINDS = [
+    { d: "north", dr: -1, df: 0 }, { d: "south", dr: 1, df: 0 },
+    { d: "east", dr: 0, df: 1 }, { d: "west", dr: 0, df: -1 }
+  ];
+
+  // ───────── local state ─────────
+  var L = {
+    screen: "start", mode: "solo", mySide: null,
+    code: "", codeDraft: "", session: "Playtest 01", myName: "", pickSide: "w",
+    sel: null, override: false, say: "", modal: null, editCardId: null,
+    terrainMode: false, terrainPick: "river", hints: true, noteOpen: false,
+    pendingPromo: null, cardDur: 3, exportFmt: "text", copied: "",
+    linked: false, dbErr: "", busy: false, now: Date.now(),
+    reveal: null,          // {card, light, dur}
+    targeting: null,       // {cardId, stage, pieceType}
+    confirmReset: false
+  };
+
+  // ───────── shared state ─────────
+  function startBoard() {
+    var back = ["r", "n", "b", "q", "k", "b", "n", "r"], b = [], i;
+    for (i = 0; i < 64; i++) b.push(null);
+    for (i = 0; i < 8; i++) {
+      b[i] = { t: back[i], c: "b" }; b[8 + i] = { t: "p", c: "b" };
+      b[48 + i] = { t: "p", c: "w" }; b[56 + i] = { t: back[i], c: "w" };
+    }
+    return b;
+  }
+
+  function freshMatch() {
+    return {
+      v: 2, session: "Playtest 01", white: null, black: null,
+      board: startBoard(), turn: "w", moveNo: 1, phase: "move",
+      log: [], cards: [], terrain: {}, barrier: [], barrierJumpable: true,
+      fallen: [], lastMove: null, startedAt: Date.now(), nextId: 1
+    };
+  }
+  var M = freshMatch();
+
+  // ───────── the network ─────────
+  // Two backends behind one seam. Inside a Claude artifact the page uses the
+  // artifact's own store; served as a plain page (GitHub Pages) it uses
+  // Supabase. The publishable key is meant to ship in client code — row level
+  // security on the table is what actually guards the data.
+  var SUPA = {
+    url: "https://muqagbawjzudnxoqwhen.supabase.co",
+    key: "sb_publishable_NWOulDK-a9kak7lHNpebRA_HzNt9n_Q",
+    cdn: "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"
+  };
+
+  var Net = { kind: null, ready: false, sb: null, channel: null, ref: null, off: null };
+  var room = null, myId = null, myTag = null, lastSentRev = 0;
+
+  // Snapshots from the store arrive FROZEN. This file runs in strict mode, so
+  // writing to one throws — which is what silently broke joining. Everything
+  // that becomes our mutable match state goes through here first.
+  function thaw(o) {
+    try { return JSON.parse(JSON.stringify(o)); } catch (e) { return null; }
+  }
+
+  function deviceId() {
+    try {
+      var k = "cto-device-id", v = window.localStorage.getItem(k);
+      if (!v) { v = "d" + Math.random().toString(36).slice(2, 12); window.localStorage.setItem(k, v); }
+      return v;
+    } catch (e) { return "d" + Math.random().toString(36).slice(2, 12); }
+  }
+
+  function loadScript(src) {
+    return new Promise(function (ok, no) {
+      var s = document.createElement("script");
+      s.src = src; s.async = true;
+      s.onload = function () { ok(); };
+      s.onerror = function () { no(new Error("could not load " + src)); };
+      document.head.appendChild(s);
+    });
+  }
+
+  function boot() {
+    myId = deviceId();
+    myTag = myId + "." + Math.random().toString(36).slice(2, 8);
+
+    if (window.claude && window.claude.use) {
+      window.claude.use("user")
+        .then(function (u) { return u ? u.id() : null; })
+        .then(function (id) { if (id) myId = id; })
+        .catch(function () { });
+      window.claude.use("db").then(function (d) {
+        if (d) { Net.sb = null; Net.db = d; Net.kind = "claude"; Net.ready = true; }
+        render();
+      }).catch(function () { render(); });
+      window.claude.use("room").then(function (r) {
+        room = r;
+        if (!r) return;
+        r.onPeers(function (ch) {
+          var linked = ch.peers.some(function (p) { return !p.isMe && p.kind === "viewer"; });
+          if (linked !== L.linked) { L.linked = linked; render(); }
+        }, function () { });
+      }).catch(function () { room = null; });
+      return;
+    }
+
+    if (!SUPA.url || SUPA.url.indexOf("http") !== 0) { render(); return; }
+    loadScript(SUPA.cdn).then(function () {
+      if (!window.supabase || !window.supabase.createClient) throw new Error("no client");
+      Net.sb = window.supabase.createClient(SUPA.url, SUPA.key);
+      Net.kind = "supabase"; Net.ready = true;
+      render();
+    }).catch(function () {
+      Net.kind = null; Net.ready = false;
+      L.dbErr = "Could not reach the match server. One-phone play still works.";
+      render();
+    });
+  }
+
+  // What to say when the live side is unavailable — it differs per backend.
+  function offlineNote() {
+    if (window.claude) return "Live matches are not available on this device. Both players need to be signed in to the same Claude workspace and opening this same link.";
+    return "Could not reach the match server. Check your connection — one-phone play works regardless.";
+  }
+
+  // ───────── persistence ─────────
+  var LKEY = "cto-solo-v2";
+  function saveSolo() { if (L.mode === "solo") { try { window.localStorage.setItem(LKEY, JSON.stringify(M)); } catch (e) { } } }
+  function loadSolo() {
+    try {
+      var raw = window.localStorage.getItem(LKEY); if (!raw) return null;
+      var o = JSON.parse(raw); return (o && o.board && o.board.length === 64) ? o : null;
+    } catch (e) { return null; }
+  }
+
+  function newCode() {
+    var s = ""; for (var i = 0; i < 4; i++) s += CODE_ALPHABET.charAt(Math.floor(Math.random() * CODE_ALPHABET.length));
+    return s;
+  }
+
+  // Read one match. Resolves null when there is no such code.
+  Net.get = function (code) {
+    if (Net.kind === "claude") {
+      return Net.db.doc("matches/" + code).get().then(function (s) {
+        return s.exists ? thaw(s.data()) : null;
+      });
+    }
+    return Net.sb.from("matches").select("state").eq("code", code).maybeSingle()
+      .then(function (r) {
+        if (r.error) throw r.error;
+        return r.data ? thaw(r.data.state) : null;
+      });
+  };
+
+  // Write the whole match. Every write carries a rising rev and the writer's
+  // tag, so a backend that echoes our own writes back can be told apart.
+  Net.put = function (code, state) {
+    state.rev = (state.rev || 0) + 1;
+    state.wby = myTag;
+    lastSentRev = state.rev;
+    if (Net.kind === "claude") return Net.db.doc("matches/" + code).set(state);
+    return Net.sb.from("matches")
+      .upsert({ code: code, state: state, updated_at: new Date().toISOString() })
+      .then(function (r) { if (r.error) throw r.error; });
+  };
+
+  Net.watch = function (code, onState, onErr) {
+    if (Net.off) { Net.off(); Net.off = null; }
+
+    if (Net.kind === "claude") {
+      var ref = Net.db.doc("matches/" + code);
+      Net.off = ref.onSnapshot(function (snap) {
+        if (!snap.exists) return;
+        if (snap.metadata && snap.metadata.hasPendingWrites) return;
+        var d = thaw(snap.data());
+        if (d && d.board) onState(d);
+      }, function (e) {
+        onErr(e.code === "not_granted"
+          ? "This device cannot join live matches."
+          : "The live connection dropped. Reload to reconnect.");
+      });
+      return;
+    }
+
+    var ch = Net.sb.channel("match-" + code, { config: { presence: { key: myTag } } });
+    ch.on("postgres_changes",
+      { event: "*", schema: "public", table: "matches", filter: "code=eq." + code },
+      function (payload) {
+        var row = payload && payload.new;
+        if (!row || !row.state) return;
+        var st = thaw(row.state);
+        if (!st || !st.board) return;
+        if (st.wby === myTag && st.rev === lastSentRev) return;   // our own echo
+        onState(st);
+      });
+    ch.on("presence", { event: "sync" }, function () {
+      var n = Object.keys(ch.presenceState() || {}).length;
+      var linked = n > 1;
+      if (linked !== L.linked) { L.linked = linked; render(); }
+    });
+    ch.subscribe(function (status) {
+      if (status === "SUBSCRIBED") { ch.track({ at: Date.now() }); }
+      else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+        onErr("The live connection dropped. Reload to reconnect.");
+      }
+    });
+    Net.channel = ch;
+    Net.off = function () { try { Net.sb.removeChannel(ch); } catch (e) { } };
+  };
+
+  function pushMatch() {
+    if (L.mode === "solo") { saveSolo(); render(); return Promise.resolve(); }
+    render();
+    if (!L.code || !Net.ready) return Promise.resolve();
+    return Net.put(L.code, M).catch(function (e) {
+      L.dbErr = (e && e.code === "revoked")
+        ? "Lost access to this match."
+        : "That move did not save. Check the connection.";
+      render();
+    });
+  }
+
+  function watchMatch(code) {
+    if (!Net.ready) return;
+    Net.watch(code, function (d) {
+      var hadCards = M.cards ? M.cards.length : 0;
+      M = d;
+      if (!M.barrier) M.barrier = [];
+      if (!M.fallen) M.fallen = [];
+      if (!M.cards) M.cards = [];
+      // the other phone played a card: show it here too
+      if (M.cards.length > hadCards) {
+        var fresh = M.cards[M.cards.length - 1];
+        var def = CARD_BY[fresh.cardId];
+        if (def && !L.reveal) showReveal(def, fresh.left);
+      }
+      if (L.screen === "waiting" && M.white && M.black) L.screen = "match";
+      render();
+    }, function (msg) {
+      L.dbErr = msg;
+      render();
+    });
+  }
+
+  // ───────── effects ─────────
+  function hasCard(id) { return M.cards.some(function (c) { return c.cardId === id; }); }
+  function stuckSquares() {
+    var out = {};
+    M.cards.forEach(function (c) { if (c.cardId === "swamp" && typeof c.square === "number") out[c.square] = true; });
+    return out;
+  }
+  function barrierSet() {
+    var out = {};
+    (M.barrier || []).forEach(function (i) { out[i] = true; });
+    return out;
+  }
+
+  function pawnLikeReach(board, from, colour) {
+    var out = {}, r = Math.floor(from / 8), f = from % 8;
+    var dir = colour === "w" ? -1 : 1;
+    function put(rr, ff, mode) {
+      if (rr < 0 || rr > 7 || ff < 0 || ff > 7) return;
+      var q = board[rr * 8 + ff];
+      if (q && q.c === colour) return;
+      if (mode === "quiet" && q) return;
+      if (mode === "cap" && !q) return;
+      out[rr * 8 + ff] = true;
+    }
+    put(r + dir, f, "quiet");
+    put(r + dir, f - 1, "cap");
+    put(r + dir, f + 1, "cap");
+    return out;
+  }
+
+  function reach(board, from) {
+    var p = board[from];
+    if (!p) return {};
+    if (stuckSquares()[from]) return {};                  // mired
+    if (p.t === "n" && hasCard("frost")) return pawnLikeReach(board, from, p.c);
+
+    var wall = barrierSet();
+    var jumpable = M.barrierJumpable !== false;
+    var out = {}, r = Math.floor(from / 8), f = from % 8, a, dr, df;
+
+    function put(rr, ff, mode) {
+      if (rr < 0 || rr > 7 || ff < 0 || ff > 7) return false;
+      var at = rr * 8 + ff;
+      if (wall[at]) return false;                          // water stops everything
+      var q = board[at];
+      if (q && q.c === p.c) return false;
+      if (mode === "quiet" && q) return false;
+      if (mode === "cap" && !q) return false;
+      out[at] = true;
+      return !q;
+    }
+    function slide(sr, sf) { var rr = r + sr, ff = f + sf; while (put(rr, ff, "any")) { rr += sr; ff += sf; } }
+
+    var t = p.t;
+    if (t === "p") {
+      var dir = p.c === "w" ? -1 : 1, home = p.c === "w" ? 6 : 1;
+      if (put(r + dir, f, "quiet") && r === home) put(r + 2 * dir, f, "quiet");
+      put(r + dir, f - 1, "cap"); put(r + dir, f + 1, "cap");
+    } else if (t === "n") {
+      var j = [[-2, -1], [-2, 1], [-1, -2], [-1, 2], [1, -2], [1, 2], [2, -1], [2, 1]];
+      for (a = 0; a < j.length; a++) {
+        var nr = r + j[a][0], nf = f + j[a][1];
+        if (!jumpable && wallInLeg(wall, r, f, nr, nf)) continue;   // flood pins the horses too
+        put(nr, nf, "any");
+      }
+    } else if (t === "k") {
+      for (dr = -1; dr <= 1; dr++) for (df = -1; df <= 1; df++) if (dr || df) put(r + dr, f + df, "any");
+    } else {
+      if (t === "r" || t === "q") { slide(-1, 0); slide(1, 0); slide(0, -1); slide(0, 1); }
+      if (t === "b" || t === "q") { slide(-1, -1); slide(-1, 1); slide(1, -1); slide(1, 1); }
+    }
+    return out;
+  }
+
+  // The two squares a knight passes over on its L. Only consulted under Flood.
+  function wallInLeg(wall, r, f, nr, nf) {
+    var dr = nr - r, df = nf - f;
+    var a = (Math.abs(dr) === 2) ? [r + dr / 2, f] : [r, f + df / 2];
+    var b = (Math.abs(dr) === 2) ? [r + dr / 2, f + df] : [r + dr, f + df / 2];
+    function bad(p) {
+      var rr = Math.round(p[0]), ff = Math.round(p[1]);
+      if (rr < 0 || rr > 7 || ff < 0 || ff > 7) return false;
+      return !!wall[rr * 8 + ff];
+    }
+    return bad(a) || bad(b);
+  }
+
+  // ───────── helpers ─────────
+  function sqName(i) { return "abcdefgh".charAt(i % 8) + String(8 - Math.floor(i / 8)); }
+  function idxOf(n) { return (8 - parseInt(n.charAt(1), 10)) * 8 + "abcdefgh".indexOf(n.charAt(0)); }
+  function typeOf(n) { return { king: "k", queen: "q", rook: "r", bishop: "b", knight: "n", pawn: "p" }[n] || "q"; }
+  function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+  function sideName(c) {
+    var seat = c === "w" ? M.white : M.black;
+    return (seat && seat.name) ? seat.name : (c === "w" ? "White" : "Black");
+  }
+  function myTurn() { return L.mode === "solo" ? true : L.mySide === M.turn; }
+  function flipped() { return L.mySide === "b"; }
+  function clockText() {
+    var s = Math.max(0, Math.floor((L.now - (M.startedAt || L.now)) / 1000));
+    var m = Math.floor(s / 60), q = s % 60;
+    return (m < 10 ? "0" : "") + m + ":" + (q < 10 ? "0" : "") + q;
+  }
+  function lastMove() { return M.log.length ? M.log[M.log.length - 1] : null; }
+
+  // ───────── card play ─────────
+  function showReveal(def, dur) {
+    L.reveal = { card: def, dur: dur, light: M.turn === "w" };
+    render();
+    setTimeout(function () {
+      if (L.reveal && L.reveal.card === def) { L.reveal = null; render(); }
+    }, 2600);
+  }
+
+  function randomBarrier() {
+    var len = 3 + Math.floor(Math.random() * 2);            // 3 or 4
+    var horizontal = Math.random() < .5;
+    var cells = [], tries = 0;
+    while (tries++ < 40) {
+      cells = [];
+      var r = 2 + Math.floor(Math.random() * 4);             // keep off the back ranks
+      var f = Math.floor(Math.random() * (8 - len + 1));
+      for (var i = 0; i < len; i++) {
+        cells.push(horizontal ? (r * 8 + f + i) : ((f + i) * 8 + r));
+      }
+      var clear = cells.every(function (c) { return !M.board[c]; });
+      if (clear) return cells;
+    }
+    return cells;
+  }
+
+  function playCard(def) {
+    var entry = {
+      id: M.nextId, cardId: def.id, ro: def.ro, en: def.en,
+      left: L.cardDur, fromMove: M.moveNo, by: L.mySide || "both"
+    };
+
+    if (def.kind === "barrier") {
+      M.barrier = randomBarrier();
+      M.barrierJumpable = def.jumpable !== false;
+      M.cards = M.cards.filter(function (c) { return c.cardId !== "river" && c.cardId !== "flood"; });
+    }
+
+    if (def.kind === "pick" || def.kind === "revive") {
+      // the card lands first, then the player picks its target on the board
+      L.targeting = { cardId: def.id, stage: def.kind === "revive" ? "choose-fallen" : "pick", entry: entry };
+      L.modal = def.kind === "revive" ? "revive" : null;
+      M.nextId += 1;
+      L.say = def.pickText || "";
+      showReveal(def, entry.left);
+      pushMatch();
+      return;
+    }
+
+    M.cards = M.cards.concat([entry]);
+    M.nextId += 1;
+    L.modal = null;
+    showReveal(def, entry.left);
+    pushMatch();
+  }
+
+  function applyPick(i) {
+    var t = L.targeting, def = CARD_BY[t.cardId];
+    var p = M.board[i];
+
+    if (t.cardId === "revive" && t.stage === "place") {
+      if (p) { L.say = "That square is taken. Tap an empty one."; return render(); }
+      var board = M.board.slice();
+      board[i] = { t: t.pieceType, c: t.pieceColour };
+      M.board = board;
+      M.fallen = M.fallen.filter(function (x, k) { return k !== t.fallenIndex; });
+      L.targeting = null; L.say = "";
+      return pushMatch();
+    }
+
+    if (!p) { L.say = "No piece there. " + (def.pickText || ""); return render(); }
+    if (def.noKing && p.t === "k") { L.say = "Not the king. Pick another piece."; return render(); }
+
+    if (t.cardId === "trench") {
+      var b2 = M.board.slice();
+      b2[i] = null;
+      M.board = b2;
+      M.fallen = M.fallen.concat([{ t: p.t, c: p.c }]);
+      L.targeting = null; L.say = cap(PNAME[p.t]) + " on " + sqName(i) + " is gone.";
+      return pushMatch();
+    }
+
+    if (t.cardId === "swamp") {
+      var e = t.entry; e.square = i;
+      M.cards = M.cards.concat([e]);
+      L.targeting = null; L.say = cap(PNAME[p.t]) + " on " + sqName(i) + " is mired.";
+      return pushMatch();
+    }
+
+    if (t.cardId === "wind") {
+      var wind = WINDS[Math.floor(Math.random() * WINDS.length)];
+      var r = Math.floor(i / 8) + wind.dr, f = (i % 8) + wind.df;
+      if (r < 0 || r > 7 || f < 0 || f > 7 || M.board[r * 8 + f] || barrierSet()[r * 8 + f]) {
+        L.targeting = null;
+        L.say = "The wind blows " + wind.d + ", but that piece has nowhere to go. It stays.";
+        return pushMatch();
+      }
+      var b3 = M.board.slice();
+      b3[r * 8 + f] = p; b3[i] = null;
+      M.board = b3;
+      M.lastMove = { from: i, to: r * 8 + f };
+      L.targeting = null;
+      L.say = "The wind blows " + wind.d + ". " + cap(PNAME[p.t]) + " " + sqName(i) + " → " + sqName(r * 8 + f) + ".";
+      return pushMatch();
+    }
+  }
+
+  function resetPowerUps() {
+    M.cards = []; M.barrier = []; M.barrierJumpable = true;
+    L.targeting = null; L.reveal = null; L.modal = null; L.confirmReset = false;
+    L.say = "Everything in play has been cleared.";
+    pushMatch();
+  }
+
+  // ───────── moves ─────────
+  function tapSquare(i) {
+    L.dbErr = "";
+    if (L.targeting && L.targeting.stage !== "choose-fallen") return applyPick(i);
+    if (L.terrainMode) return paintTerrain(i);
+
+    if (M.phase === "resolve") { L.say = "Finish this turn first — say what happened below."; return render(); }
+    if (!myTurn()) { L.say = "It is " + sideName(M.turn) + "’s move, on the other phone."; return render(); }
+
+    var p = M.board[i];
+
+    if (L.sel === null) {
+      if (!p) { L.say = "Nothing on " + sqName(i) + "."; return render(); }
+      if (p.c !== M.turn && !L.override) { L.say = "That one is " + sideName(p.c) + "’s. " + sideName(M.turn) + " to move."; return render(); }
+      if (stuckSquares()[i] && !L.override) { L.say = "That piece is mired. It cannot move this turn."; return render(); }
+      L.sel = i; L.say = ""; return render();
+    }
+
+    if (L.sel === i) { L.sel = null; L.say = ""; return render(); }
+
+    var mover = M.board[L.sel];
+    if (!mover) { L.sel = null; return render(); }
+    if (p && p.c === mover.c && !L.override) { L.sel = i; L.say = ""; return render(); }
+
+    if (!L.override && !reach(M.board, L.sel)[i]) {
+      if (barrierSet()[i]) L.say = "That square is under water.";
+      else L.say = "A " + PNAME[mover.t] + " cannot reach " + sqName(i) + ". Use Break the rule if a card allows it.";
+      return render();
+    }
+
+    var lastRank = mover.c === "w" ? 0 : 7;
+    if (mover.t === "p" && Math.floor(i / 8) === lastRank) {
+      L.pendingPromo = { from: L.sel, to: i }; L.modal = "promo"; L.sel = null; L.say = "";
+      return render();
+    }
+    applyMove(L.sel, i, null);
+  }
+
+  function applyMove(from, to, promoteTo) {
+    var mover = M.board[from], target = M.board[to];
+    var board = M.board.slice();
+    board[to] = promoteTo ? { t: promoteTo, c: mover.c } : mover;
+    board[from] = null;
+
+    var san = PLETTER[mover.t] + sqName(from) + (target ? "×" : "–") + sqName(to);
+    if (promoteTo) san += "=" + PLETTER[promoteTo];
+
+    var tags = [];
+    if (target) tags.push("CAPTURE");
+    if (L.override) tags.push("OVERRIDE");
+
+    M.board = board;
+    if (target) M.fallen = (M.fallen || []).concat([{ t: target.t, c: target.c }]);
+    M.log = M.log.concat([{
+      id: M.nextId, ply: M.log.length + 1, no: M.moveNo, side: M.turn, san: san,
+      from: sqName(from), to: sqName(to), piece: PNAME[mover.t],
+      captured: target ? PNAME[target.t] : null,
+      promotedTo: promoteTo ? PNAME[promoteTo] : null,
+      terrainFrom: M.terrain[from] || null, terrainTo: M.terrain[to] || null,
+      cardsInPlay: M.cards.map(function (c) { return c.cardId; }),
+      by: L.mySide || "both", tags: tags, note: "", at: Date.now() - (M.startedAt || Date.now())
+    }]);
+    M.lastMove = { from: from, to: to };
+    M.phase = "resolve";
+    M.nextId += 1;
+
+    L.sel = null; L.override = false; L.say = ""; L.noteOpen = false;
+    L.pendingPromo = null; L.modal = null;
+    pushMatch();
+  }
+
+  function endTurn() {
+    var kept = [];
+    M.cards.forEach(function (c) {
+      var left = c.left - 1;
+      if (left > 0) { var n = {}; for (var k in c) n[k] = c[k]; n.left = left; kept.push(n); }
+    });
+    M.cards = kept;
+    // the water is only there while a river card is
+    if (!kept.some(function (c) { return c.cardId === "river" || c.cardId === "flood"; })) {
+      M.barrier = []; M.barrierJumpable = true;
+    }
+
+    M.phase = "move";
+    M.turn = M.turn === "w" ? "b" : "w";
+    if (M.log.length && M.log[M.log.length - 1].side === "b") M.moveNo += 1;
+    L.say = ""; L.noteOpen = false; L.sel = null;
+    pushMatch();
+  }
+
+  function toggleTag(tag) {
+    var lm = lastMove(); if (!lm) return;
+    var log = M.log.slice(), last = {}, k;
+    for (k in lm) last[k] = lm[k];
+    var tags = last.tags.slice(), at = tags.indexOf(tag);
+    if (at >= 0) tags.splice(at, 1); else tags.push(tag);
+    last.tags = tags; log[log.length - 1] = last; M.log = log;
+    pushMatch();
+  }
+
+  var noteTimer = null;
+  function setNote(v) {
+    var lm = lastMove(); if (!lm) return;
+    var log = M.log.slice(), last = {}, k;
+    for (k in lm) last[k] = lm[k];
+    last.note = v; log[log.length - 1] = last; M.log = log;
+    if (noteTimer) clearTimeout(noteTimer);
+    noteTimer = setTimeout(function () {
+      noteTimer = null;
+      if (L.mode === "solo") saveSolo(); else if (L.code && Net.ready) Net.put(L.code, M).catch(function () { });
+    }, 600);
+  }
+
+  function undoLast() {
+    if (!M.log.length) return;
+    var keep = M.log.slice(0, M.log.length - 1);
+    var removed = M.log[M.log.length - 1];
+    var board = startBoard(), fallen = [];
+    keep.forEach(function (m) {
+      var fi = idxOf(m.from), ti = idxOf(m.to), mv = board[fi];
+      if (!mv) return;
+      if (board[ti]) fallen.push({ t: board[ti].t, c: board[ti].c });
+      board[ti] = m.promotedTo ? { t: typeOf(m.promotedTo), c: mv.c } : mv;
+      board[fi] = null;
+    });
+    var last = keep.length ? keep[keep.length - 1] : null;
+    M.board = board; M.log = keep; M.fallen = fallen;
+    M.lastMove = last ? { from: idxOf(last.from), to: idxOf(last.to) } : null;
+    if (M.phase === "move") { M.turn = removed.side; M.moveNo = removed.no; }
+    M.phase = "move";
+    L.sel = null; L.override = false; L.say = ""; L.noteOpen = false;
+    pushMatch();
+  }
+
+  function paintTerrain(i) {
+    var t = {}, k;
+    for (k in M.terrain) t[k] = M.terrain[k];
+    if (L.terrainPick === "erase") delete t[i]; else t[i] = L.terrainPick;
+    M.terrain = t;
+    pushMatch();
+  }
+
+  // ───────── export ─────────
+  function terrainList() {
+    var out = [], k;
+    for (k in M.terrain) {
+      if (!Object.prototype.hasOwnProperty.call(M.terrain, k)) continue;
+      var d = TBY[M.terrain[k]];
+      out.push({ square: sqName(parseInt(k, 10)), terrain: M.terrain[k], label: d ? d.name : M.terrain[k] });
+    }
+    out.sort(function (a, b) { return a.square < b.square ? -1 : 1; });
+    return out;
+  }
+
+  function exportText() {
+    if (L.exportFmt === "json") {
+      return JSON.stringify({
+        game: "Chess The Origins", session: M.session, code: L.code || null,
+        white: M.white, black: M.black, length: clockText(),
+        terrain: terrainList(),
+        barrier: (M.barrier || []).map(sqName),
+        moves: M.log, cardsInPlay: M.cards, fallen: M.fallen
+      }, null, 2);
+    }
+    var A = [];
+    A.push("CHESS THE ORIGINS — PLAYTEST LOG"); A.push("");
+    A.push("Session  " + M.session);
+    if (L.code) A.push("Code     " + L.code);
+    A.push("White    " + sideName("w"));
+    A.push("Black    " + sideName("b"));
+    A.push("Length   " + clockText());
+    A.push("Moves    " + M.log.length);
+    var terr = terrainList();
+    if (terr.length) { A.push(""); A.push("TERRAIN"); A.push("  " + terr.map(function (t) { return t.square + " " + t.label; }).join("  ")); }
+    A.push(""); A.push("  #  SIDE  MOVE        FLAGS");
+    A.push("  " + new Array(46).join("─"));
+    M.log.forEach(function (m) {
+      var n = String(m.no); while (n.length < 3) n = " " + n;
+      var s = m.san; while (s.length < 11) s += " ";
+      A.push(("  " + n + "  " + (m.side === "w" ? "W " : " B") + "   " + s + " " + m.tags.join(" ")).replace(/\s+$/, ""));
+      if (m.note) A.push("                       └ " + m.note);
+      if (m.cardsInPlay && m.cardsInPlay.length) A.push("                       · under " + m.cardsInPlay.join(", "));
+    });
+    if (M.cards.length) {
+      A.push(""); A.push("CARDS STILL IN PLAY");
+      M.cards.forEach(function (c) { A.push("  " + c.en + " (" + c.ro + ")  ·  " + c.left + " left  ·  from move " + c.fromMove); });
+    }
+    return A.join("\n");
+  }
+
+  function doCopy(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () {
+        L.copied = "yes"; render(); setTimeout(function () { L.copied = ""; render(); }, 2000);
+      }, function () { L.copied = "manual"; render(); });
+    } else { L.copied = "manual"; render(); }
+  }
+
+  // ───────── DOM ─────────
+  function el(tag, attrs, kids) {
+    var n = document.createElement(tag), k;
+    if (attrs) for (k in attrs) {
+      if (k === "class") n.className = attrs[k];
+      else if (k === "text") n.textContent = attrs[k];
+      else if (k.slice(0, 2) === "on") n.addEventListener(k.slice(2), attrs[k]);
+      else if (attrs[k] === true) n.setAttribute(k, "");
+      else if (attrs[k] !== false && attrs[k] != null) n.setAttribute(k, attrs[k]);
+    }
+    if (kids) kids.forEach(function (c) { if (c) n.appendChild(c); });
+    return n;
+  }
+  function t(tag, cls, s) { return el(tag, { class: cls, text: s }); }
+
+  // ───────── start ─────────
+  function screenStart() {
+    var saved = loadSolo();
+    var p = el("div", { class: "page" });
+
+    p.appendChild(t("div", "brandmark", "SAHSAH"));
+    p.appendChild(el("h1", { class: "t-large voice", style: "margin:14px 0 0", text: "Chess: The Origins" }));
+    p.appendChild(t("p", "t-body", "You play on the wood. After each move you tap it here, and the console tells you what it sees and asks what happened."));
+
+    var lab = el("label", { class: "t-cap caps", for: "f-session", text: "Session", style: "display:block;margin-bottom:7px" });
+    var inp = el("input", { class: "field", id: "f-session", type: "text", value: L.session, oninput: function (e) { L.session = e.target.value; } });
+    p.appendChild(el("div", {}, [lab, inp]));
+
+    p.appendChild(t("div", "t-cap caps", "How are you playing?"));
+
+    var opts = el("div", { class: "stack", style: "gap:10px" });
+    opts.appendChild(el("button", { class: "row", type: "button", onclick: startSolo }, [
+      t("span", "lead t-title2", "▢"),
+      el("span", { class: "mid" }, [t("span", "t-head", "One phone, between us"), t("span", "t-foot", "It sits by the board and you both tap into it.")]),
+      t("span", "chev", "›")
+    ]));
+    opts.appendChild(el("button", { class: "row", type: "button", onclick: function () { L.screen = "pairHost"; L.mode = "host"; render(); } }, [
+      t("span", "lead t-title2", "▣"),
+      el("span", { class: "mid" }, [t("span", "t-head", "Two phones — start a match"), t("span", "t-foot", "You get four letters. They type them in and you are linked.")]),
+      t("span", "chev", "›")
+    ]));
+    opts.appendChild(el("button", { class: "row", type: "button", onclick: function () { L.screen = "pairGuest"; L.mode = "guest"; render(); } }, [
+      t("span", "lead t-title2", "→"),
+      el("span", { class: "mid" }, [t("span", "t-head", "Two phones — join with a code"), t("span", "t-foot", "They already started and gave you four letters.")]),
+      t("span", "chev", "›")
+    ]));
+    p.appendChild(opts);
+
+    if (!Net.ready) {
+      p.appendChild(t("div", "t-foot", window.claude
+        ? "Two-phone play needs both of you signed in to the same Claude workspace."
+        : "Connecting to the match server… one phone works either way."));
+    }
+
+    if (saved) {
+      p.appendChild(el("button", {
+        class: "btn plain", type: "button", text: "Resume · " + (saved.session || "last match"),
+        onclick: function () { M = saved; if (!M.barrier) M.barrier = []; if (!M.fallen) M.fallen = []; L.mode = "solo"; L.mySide = null; L.screen = "match"; L.terrainMode = false; render(); }
+      }));
+    }
+    return p;
+  }
+
+  function startSolo() {
+    M = freshMatch(); M.session = L.session;
+    M.white = { id: "local-w", name: "White" };
+    M.black = { id: "local-b", name: "Black" };
+    M.startedAt = Date.now();
+    L.mode = "solo"; L.mySide = null; L.code = ""; L.screen = "match"; L.terrainMode = true;
+    saveSolo(); render();
+  }
+
+  function screenPairHost() {
+    var p = el("div", { class: "page" });
+    p.appendChild(t("div", "t-cap caps", "Two phones · Start"));
+    p.appendChild(el("h1", { class: "t-title voice", style: "margin:10px 0 0", text: "Start a match" }));
+    p.appendChild(t("p", "t-sub", "Pick your side and your name. The code comes next — the other player types it into their phone."));
+
+    p.appendChild(el("div", {}, [
+      el("label", { class: "t-cap caps", for: "f-host-name", text: "You are", style: "display:block;margin-bottom:7px" }),
+      el("input", { class: "field", id: "f-host-name", type: "text", value: L.myName, placeholder: "your name", oninput: function (e) { L.myName = e.target.value; } })
+    ]));
+
+    p.appendChild(t("div", "t-cap caps", "Your side"));
+    var sp = el("div", { class: "sides" });
+    [["w", "White", "#F6F0E0"], ["b", "Black", "#141F29"]].forEach(function (o) {
+      sp.appendChild(el("button", {
+        type: "button", "aria-pressed": L.pickSide === o[0] ? "true" : "false",
+        onclick: function () { L.pickSide = o[0]; render(); }
+      }, [
+        el("span", { class: "g", style: "color:" + o[2] + ";text-shadow:" + (o[0] === "w" ? "0 1px 3px rgba(0,0,0,.7)" : "0 1px 2px rgba(246,240,224,.45)"), text: GLYPH.k }),
+        t("span", "t-foot", o[1])
+      ]));
+    });
+    p.appendChild(sp);
+
+    if (!Net.ready) p.appendChild(t("div", "callout t-sub", offlineNote()));
+    if (L.dbErr) p.appendChild(t("div", "callout t-sub", L.dbErr));
+
+    p.appendChild(el("button", { class: "btn", type: "button", disabled: !Net.ready || L.busy, text: L.busy ? "Creating…" : "Create the match", onclick: createMatch }));
+    p.appendChild(el("button", { class: "btn plain", type: "button", text: "Back", onclick: function () { L.screen = "start"; L.mode = "solo"; render(); } }));
+    return p;
+  }
+
+  function createMatch() {
+    if (!Net.ready || L.busy) return;
+    L.busy = true; L.dbErr = ""; render();
+    var code = newCode();
+    Net.get(code).then(function (existing) {
+      if (existing) code = newCode();            // one retry is plenty at 900k codes
+      var m = freshMatch();
+      m.session = L.session; m.startedAt = Date.now();
+      var seat = { id: myId || deviceId(), name: (L.myName || "").trim() || (L.pickSide === "w" ? "White" : "Black") };
+      if (L.pickSide === "w") m.white = seat; else m.black = seat;
+      return Net.put(code, m).then(function () {
+        M = m; L.code = code; L.mySide = L.pickSide; L.mode = "host";
+        L.screen = "waiting"; L.busy = false; watchMatch(code); render();
+      });
+    }).catch(function (e) {
+      L.busy = false;
+      var c = (e && (e.code || e.message)) || "unknown";
+      L.dbErr = (e && e.code === "quota_exceeded")
+        ? "The match store is full."
+        : "Could not start a live match — " + c + ".";
+      render();
+    });
+  }
+
+  function screenPairGuest() {
+    var p = el("div", { class: "page" });
+    p.appendChild(t("div", "t-cap caps", "Two phones · Join"));
+    p.appendChild(el("h1", { class: "t-title voice", style: "margin:10px 0 0", text: "Join a match" }));
+    p.appendChild(t("p", "t-sub", "Type the four letters showing on the other phone."));
+
+    var codeIn = el("input", {
+      class: "codefield", id: "f-code", type: "text", value: L.codeDraft, maxlength: "4",
+      autocapitalize: "characters", autocomplete: "off", spellcheck: "false",
+      inputmode: "text", "aria-label": "Match code",
+      oninput: function (e) {
+        var v = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 4);
+        e.target.value = v;
+        if (v !== L.codeDraft) { L.codeDraft = v; render(); }   // the button has to wake up
+      },
+      onkeydown: function (e) { if (e.key === "Enter") { e.preventDefault(); joinMatch(); } }
+    });
+    p.appendChild(codeIn);
+
+    p.appendChild(el("div", {}, [
+      el("label", { class: "t-cap caps", for: "f-guest-name", text: "You are", style: "display:block;margin-bottom:7px" }),
+      el("input", { class: "field", id: "f-guest-name", type: "text", value: L.myName, placeholder: "your name", oninput: function (e) { L.myName = e.target.value; } })
+    ]));
+
+    if (!Net.ready) p.appendChild(t("div", "callout t-sub", offlineNote()));
+    if (L.dbErr) p.appendChild(t("div", "callout t-sub", L.dbErr));
+
+    p.appendChild(el("button", {
+      class: "btn", type: "button", disabled: !Net.ready || L.busy,
+      text: L.busy ? "Joining…" : "Join", onclick: joinMatch
+    }));
+    p.appendChild(el("button", { class: "btn plain", type: "button", text: "Back", onclick: function () { L.screen = "start"; L.mode = "solo"; render(); } }));
+    return p;
+  }
+
+  function joinMatch() {
+    if (!Net.ready || L.busy) return;
+    if (L.codeDraft.length !== 4) { L.dbErr = "The code is four letters."; return render(); }
+    L.busy = true; L.dbErr = ""; render();
+
+    var code = L.codeDraft, me = myId || deviceId();
+
+    Net.get(code).then(function (m) {
+      if (!m) {
+        L.busy = false;
+        L.dbErr = "No match with the code " + code + ". Check the letters on the other phone.";
+        return render();
+      }
+      if (!m.board) { L.busy = false; L.dbErr = "That match looks damaged. Start a new one."; return render(); }
+      if (!m.barrier) m.barrier = [];
+      if (!m.fallen) m.fallen = [];
+      if (!m.cards) m.cards = [];
+
+      var seat = { id: me, name: (L.myName || "").trim() || "Player" }, side;
+      if (!m.white) side = "w";
+      else if (!m.black) side = "b";
+      else if (m.white.id === me) side = "w";
+      else if (m.black.id === me) side = "b";
+      else { L.busy = false; L.dbErr = "That match already has two players."; return render(); }
+
+      if (side === "w") m.white = seat; else m.black = seat;
+
+      return Net.put(code, m).then(function () {
+        M = m;
+        L.code = code; L.mySide = side; L.mode = "guest"; L.screen = "match";
+        L.busy = false; L.terrainMode = false; L.dbErr = "";
+        watchMatch(code); render();
+      });
+    }).catch(function (e) {
+      L.busy = false;
+      var c = (e && (e.code || e.message)) || "unknown";
+      if (c === "invalid_argument") L.dbErr = "That code is not valid.";
+      else if (c === "not_granted" || c === "capability_disabled") L.dbErr = "This device is not allowed into live matches.";
+      else L.dbErr = "Could not join — " + c;
+      render();
+    });
+  }
+
+  function screenWaiting() {
+    var p = el("div", { class: "page" });
+    p.appendChild(t("div", "t-cap caps", "Waiting for the other phone"));
+    p.appendChild(el("h1", { class: "t-title voice", style: "margin:10px 0 0", text: "Your code" }));
+    var box = el("div", { class: "codecard" });
+    box.appendChild(t("div", "v", L.code));
+    box.appendChild(t("div", "t-cap caps", "Four letters, on the other phone"));
+    p.appendChild(box);
+    p.appendChild(t("p", "t-sub", "They open this same link, choose “Join with a code” and type those four letters. The match starts the moment they do."));
+    p.appendChild(el("button", { class: "btn tinted", type: "button", text: L.copied === "yes" ? "Copied" : "Copy the code", onclick: function () { doCopy(L.code); } }));
+    p.appendChild(el("button", { class: "btn plain", type: "button", text: "Start without them", onclick: function () { L.screen = "match"; L.terrainMode = true; render(); } }));
+    if (L.dbErr) p.appendChild(t("div", "callout t-sub", L.dbErr));
+    return p;
+  }
+
+  // ───────── match ─────────
+  function bandText() {
+    var lm = lastMove();
+    if (L.targeting) {
+      var def = CARD_BY[L.targeting.cardId];
+      return { title: def.en, say: L.say || def.pickText || "Tap a square.", meta: "", active: true, ov: false };
+    }
+    if (L.terrainMode) {
+      return { title: "Mark the terrain", say: "Pick a type, then tap the squares it covers.", meta: Object.keys(M.terrain).length + " set", active: true, ov: false };
+    }
+    if (M.phase === "resolve" && lm) {
+      var bits = [];
+      if (lm.captured) bits.push("Took a " + lm.captured + ".");
+      if (lm.terrainTo) bits.push("Landed on " + (TBY[lm.terrainTo] ? TBY[lm.terrainTo].name.toLowerCase() : lm.terrainTo) + ".");
+      if (!bits.length) bits.push("Quiet square.");
+      return { title: cap(lm.piece) + " " + lm.from + " → " + lm.to, say: bits.join(" "), meta: "Move " + lm.no, active: true, ov: false };
+    }
+    if (L.sel !== null && M.board[L.sel]) {
+      return {
+        title: cap(PNAME[M.board[L.sel].t]) + " on " + sqName(L.sel),
+        say: L.override ? "Rule off — tap any square." : "Tap where it went.",
+        meta: "Move " + M.moveNo, active: false, ov: true
+      };
+    }
+    return {
+      title: sideName(M.turn) + " to move",
+      say: myTurn() ? "Move the piece on the board, then tap it here." : "Waiting for the other phone.",
+      meta: "Move " + M.moveNo, active: false, ov: false
+    };
+  }
+
+  var clockEl = null;
+
+  function screenMatch() {
+    var frag = document.createDocumentFragment();
+
+    var bar = el("div", { class: "topbar material" });
+    bar.appendChild(t("span", "brandmark", "SAHSAH"));
+    bar.appendChild(t("span", "sess t-foot", M.session + (L.code ? " · " + L.code : "")));
+    if (L.mode !== "solo") {
+      var pill = el("span", { class: "pill" });
+      pill.appendChild(el("span", { class: "dot" + (L.linked ? " on" : "") }));
+      pill.appendChild(t("span", "t-cap2", L.linked ? "Linked" : "Alone"));
+      bar.appendChild(pill);
+    }
+    clockEl = el("span", { class: "num t-foot", text: clockText() });
+    bar.appendChild(clockEl);
+    frag.appendChild(bar);
+
+    var b = bandText();
+    var band = el("div", { class: "band" + (b.active ? " active" : "") });
+    var r1 = el("div", { class: "r1" });
+    r1.appendChild(el("span", { class: "turnmark", style: "background:" + (M.turn === "w" ? "var(--piece-w)" : "var(--piece-b)") }));
+    r1.appendChild(el("h2", { text: b.title }));
+    if (b.meta) r1.appendChild(t("span", "t-cap2", b.meta));
+    band.appendChild(r1);
+
+    var r2 = el("div", { class: "r2" });
+    r2.appendChild(t("span", "say" + (L.say ? " alert" : ""), b.say));
+    if (b.ov) r2.appendChild(el("button", {
+      class: "tag-btn" + (L.override ? " on" : ""), type: "button",
+      text: L.override ? "Rule off" : "Break the rule",
+      onclick: function () { L.override = !L.override; L.say = ""; render(); }
+    }));
+    if (L.terrainMode) r2.appendChild(el("button", {
+      class: "tag-btn gold", type: "button", text: Object.keys(M.terrain).length ? "Done" : "Skip",
+      onclick: function () { L.terrainMode = false; L.sel = null; L.say = ""; render(); }
+    }));
+    if (L.targeting) r2.appendChild(el("button", {
+      class: "tag-btn", type: "button", text: "Cancel",
+      onclick: function () { L.targeting = null; L.say = ""; render(); }
+    }));
+    band.appendChild(r2);
+    frag.appendChild(band);
+
+    if (L.dbErr) frag.appendChild(t("div", "callout t-sub", L.dbErr));
+
+    if (L.terrainMode) {
+      var tb = el("div", { class: "terrbar" });
+      TERRAIN.forEach(function (tt) {
+        var on = L.terrainPick === tt.id;
+        tb.appendChild(el("button", {
+          type: "button", "aria-pressed": on ? "true" : "false", "aria-label": tt.name,
+          style: on ? ("background:" + tt.color + ";border-color:" + tt.color) : "",
+          onclick: function () { L.terrainPick = tt.id; render(); }
+        }, [
+          el("span", { style: "font-size:16px;line-height:1;color:" + (on ? "#17202B" : tt.color), text: tt.mark }),
+          el("span", { class: "t-cap2", style: on ? "color:#17202B" : "", text: tt.short })
+        ]));
+      });
+      frag.appendChild(tb);
+    }
+
+    frag.appendChild(boardBlock());
+
+    var lg = el("div", { class: "legend" });
+    TERRAIN.slice(0, 4).forEach(function (tt) {
+      lg.appendChild(el("div", { style: "background:" + tt.tint }, [
+        el("span", { style: "font-size:12px;line-height:1;color:" + tt.color, text: tt.mark }),
+        t("span", "t-cap2", tt.short)
+      ]));
+    });
+    frag.appendChild(lg);
+
+    var rail = el("div", { class: "rail" });
+    rail.appendChild(t("span", "t-cap2 caps", "In play"));
+    var strip = el("div", { class: "strip" });
+    if (!M.cards.length) strip.appendChild(t("span", "t-foot", "nothing in play"));
+    M.cards.forEach(function (c) {
+      strip.appendChild(el("button", {
+        class: "chipcard", type: "button", "aria-label": c.en + ", " + c.left + " turns left, tap to adjust",
+        onclick: function () { L.modal = "card-edit"; L.editCardId = c.id; render(); }
+      }, [t("span", "nm", c.en), t("span", "lf", c.left + "↓")]));
+    });
+    rail.appendChild(strip);
+    frag.appendChild(rail);
+
+    frag.appendChild(M.phase === "resolve" && !L.terrainMode && !L.targeting ? askPane() : logPane());
+
+    var dock = el("div", { class: "dock material" });
+    function dockBtn(icon, label, fn, off) {
+      return el("button", { type: "button", disabled: !!off, onclick: fn }, [t("span", "ic", icon), t("span", "", label)]);
+    }
+    dock.appendChild(dockBtn("↩", "Undo", undoLast, !M.log.length));
+    dock.appendChild(dockBtn("◆", "Cards", function () { L.modal = "cards"; render(); }));
+    dock.appendChild(dockBtn("≡", "More", function () { L.modal = "menu"; render(); }));
+    frag.appendChild(dock);
+
+    return frag;
+  }
+
+  function boardBlock() {
+    var wrap = el("div", { class: "boardzone" });
+    var flip = flipped();
+
+    var ranks = el("div", { class: "ranks" });
+    for (var q = 0; q < 8; q++) ranks.appendChild(t("div", "t-cap2", String(flip ? q + 1 : 8 - q)));
+    wrap.appendChild(ranks);
+
+    var col = el("div", { class: "boardcol" });
+    var grid = el("div", { class: "board" });
+    var dots = {};
+    if (L.hints && L.sel !== null && !L.terrainMode && !L.targeting && M.phase === "move" && !L.override) dots = reach(M.board, L.sel);
+    for (var n = 0; n < 64; n++) grid.appendChild(square(flip ? 63 - n : n, dots));
+    col.appendChild(grid);
+
+    var files = el("div", { class: "files" });
+    for (var f = 0; f < 8; f++) files.appendChild(t("div", "t-cap2", "abcdefgh".charAt(flip ? 7 - f : f)));
+    col.appendChild(files);
+
+    wrap.appendChild(col);
+    return wrap;
+  }
+
+  function square(idx, dots) {
+    var r = Math.floor(idx / 8), f = idx % 8;
+    var light = (r + f) % 2 === 0;
+    var p = M.board[idx], terr = M.terrain[idx];
+    var hot = M.lastMove && (M.lastMove.from === idx || M.lastMove.to === idx);
+    var wall = barrierSet()[idx];
+    var stuck = stuckSquares()[idx];
+
+    var cls = "sq" + (light ? " lt" : "") + (hot ? " hot" : "") + (L.sel === idx ? " sel" : "") + (L.targeting && p ? " target" : "");
+    var aria = sqName(idx);
+    if (p) aria = (p.c === "w" ? "white " : "black ") + PNAME[p.t] + " on " + aria;
+    if (wall) aria += ", under water";
+    else if (terr && TBY[terr]) aria += ", " + TBY[terr].name.toLowerCase();
+    if (stuck) aria += ", mired";
+
+    var kids = [];
+    if (terr && TBY[terr] && !wall) {
+      kids.push(el("span", { class: "tint", style: "background:" + TBY[terr].tint }));
+      kids.push(el("span", { class: "tmark", style: "color:" + TBY[terr].color, text: TBY[terr].mark }));
+    }
+    if (wall) kids.push(el("span", { class: "water" }));
+    if (p) {
+      var muted = !L.terrainMode && !L.targeting && M.phase === "move" && p.c !== M.turn;
+      kids.push(el("span", { class: "pc " + p.c + (muted ? " muted" : "") + (stuck ? " stuck" : ""), text: GLYPH[p.t] }));
+    }
+    if (dots[idx]) kids.push(el("span", { class: "dotmark" }));
+
+    return el("button", { class: cls, type: "button", "aria-label": aria, onclick: function () { tapSquare(idx); } }, kids);
+  }
+
+  function logPane() {
+    var pane = el("div", { class: "pane" });
+    if (!M.log.length) {
+      pane.appendChild(t("div", "empty t-sub", "Nothing played yet. Every move you enter is listed here, newest first."));
+      return pane;
+    }
+    for (var i = M.log.length - 1; i >= 0; i--) {
+      var m = M.log[i], newest = i === M.log.length - 1;
+      var row = el("div", { class: "mv" + (newest ? " newest" : "") });
+      row.appendChild(t("span", "no", m.no + (m.side === "w" ? "." : "…")));
+      row.appendChild(t("span", "san", m.san));
+      var meta = el("div", { class: "meta" });
+      m.tags.forEach(function (tg) {
+        var c = "grey";
+        if (tg === "MINE" || tg === "REFUSED") c = "red";
+        else if (tg === "CARD" || tg === "OVERRIDE") c = "gold";
+        else if (tg === "TERRAIN") c = "green";
+        meta.appendChild(t("span", "badge " + c, tg));
+      });
+      if (m.note) meta.appendChild(t("span", "said", m.note));
+      row.appendChild(meta);
+      pane.appendChild(row);
+    }
+    return pane;
+  }
+
+  function askPane() {
+    var pane = el("div", { class: "pane ask" });
+    var lm = lastMove();
+    var mine = L.mode === "solo" || (lm && lm.by === L.mySide);
+    if (!mine) {
+      pane.appendChild(t("div", "empty t-sub", sideName(lm ? lm.side : M.turn) + " is saying what happened. The turn comes to you next."));
+      return pane;
+    }
+    pane.appendChild(t("div", "t-cap caps", "What happened?"));
+    var grid = el("div", { class: "askgrid" });
+    RESOLVE.forEach(function (rr) {
+      var on = lm && lm.tags.indexOf(rr.tag) >= 0;
+      grid.appendChild(el("button", {
+        type: "button", class: rr.warn ? "warn" : "", "aria-pressed": on ? "true" : "false",
+        text: rr.label, onclick: function () { toggleTag(rr.tag); }
+      }));
+    });
+    grid.appendChild(el("button", {
+      type: "button", "aria-pressed": L.noteOpen ? "true" : "false", text: "Note…",
+      onclick: function () { L.noteOpen = !L.noteOpen; render(); }
+    }));
+    pane.appendChild(grid);
+
+    if (L.noteOpen) pane.appendChild(el("input", {
+      class: "field", id: "f-note", type: "text", placeholder: "in your own words",
+      value: lm ? lm.note : "", style: "margin-top:10px", oninput: function (e) { setNote(e.target.value); }
+    }));
+
+    var flagged = lm ? lm.tags.filter(function (x) { return x !== "CAPTURE" && x !== "OVERRIDE"; }).length : 0;
+    pane.appendChild(el("button", {
+      class: "btn", type: "button", style: "margin-top:12px",
+      text: (flagged || (lm && lm.note)) ? "Done — end the turn" : "Nothing happened — end the turn",
+      onclick: endTurn
+    }));
+    return pane;
+  }
+
+  // ───────── summary ─────────
+  function screenSummary() {
+    var frag = document.createDocumentFragment();
+    var head = el("div", { style: "flex:0 0 auto;padding:24px 20px 16px;padding-top:calc(24px + env(safe-area-inset-top,0px));border-bottom:1px solid var(--sep)" });
+    head.appendChild(t("div", "t-cap caps", "Playtest log"));
+    head.appendChild(el("h2", { class: "t-title voice", style: "margin:8px 0 0", text: M.session }));
+    var flagged = 0;
+    M.log.forEach(function (m) { if (m.tags.length || m.note) flagged++; });
+    var stats = el("div", { style: "display:flex;gap:26px;margin-top:14px" });
+    [["Moves", String(M.log.length), "var(--fg)"], ["Length", clockText(), "var(--fg)"], ["Flagged", String(flagged), "var(--accent)"]].forEach(function (s) {
+      stats.appendChild(el("div", {}, [t("div", "t-cap2 caps", s[0]), el("div", { class: "num t-title2", style: "color:" + s[2] + ";margin-top:2px", text: s[1] })]));
+    });
+    head.appendChild(stats);
+    frag.appendChild(head);
+
+    var segs = el("div", { style: "flex:0 0 auto;display:flex;gap:8px;padding:12px 20px;border-bottom:1px solid var(--sep)" });
+    [["text", "Readable"], ["json", "JSON"]].forEach(function (s) {
+      segs.appendChild(el("button", {
+        class: "btn " + (L.exportFmt === s[0] ? "" : "plain"), type: "button", style: "min-height:44px;font-size:15px",
+        text: s[1], onclick: function () { L.exportFmt = s[0]; L.copied = ""; render(); }
+      }));
+    });
+    frag.appendChild(segs);
+
+    var body = el("div", { style: "flex:1;min-height:0;overflow:auto;padding:16px 20px;background:#080C11" });
+    body.appendChild(el("pre", { class: "num", style: "margin:0;font-size:12px;line-height:1.6;color:var(--fg-2);white-space:pre;user-select:text", text: exportText() }));
+    frag.appendChild(body);
+
+    var foot = el("div", { style: "flex:0 0 auto;padding:14px 20px;padding-bottom:calc(22px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--sep);display:flex;flex-direction:column;gap:10px" });
+    foot.appendChild(el("button", {
+      class: "btn", type: "button",
+      text: L.copied === "yes" ? "Copied" : (L.copied === "manual" ? "Select the text above" : "Copy the log"),
+      onclick: function () { doCopy(exportText()); }
+    }));
+    var pair = el("div", { style: "display:flex;gap:10px" });
+    pair.appendChild(el("button", { class: "btn plain", type: "button", text: "Back", onclick: function () { L.screen = "match"; render(); } }));
+    pair.appendChild(el("button", { class: "btn plain", type: "button", text: "New match", onclick: function () { L.screen = "start"; L.mode = "solo"; L.mySide = null; L.code = ""; render(); } }));
+    foot.appendChild(pair);
+    frag.appendChild(foot);
+    return frag;
+  }
+
+  // ───────── sheets ─────────
+  function sheetCards() {
+    var s = el("div", { class: "sheet" });
+    s.appendChild(el("div", { class: "grabber" }));
+    s.appendChild(t("div", "t-title2 voice", "Play a card"));
+    s.appendChild(t("p", "t-sub", "It counts down a step each move and falls off by itself. Terrain cards draw themselves onto the board."));
+
+    s.appendChild(t("div", "t-cap caps", "Lasts"));
+    var st = el("div", { class: "stepper" });
+    st.appendChild(el("button", { type: "button", "aria-label": "Fewer turns", text: "−", onclick: function () { L.cardDur = Math.max(1, L.cardDur - 1); render(); } }));
+    st.appendChild(t("div", "v", L.cardDur + (L.cardDur === 1 ? " turn" : " turns")));
+    st.appendChild(el("button", { type: "button", "aria-label": "More turns", text: "+", onclick: function () { L.cardDur = Math.min(5, L.cardDur + 1); render(); } }));
+    s.appendChild(st);
+
+    var deck = el("div", { class: "deck" });
+    DECK.forEach(function (c) {
+      deck.appendChild(el("button", { class: "deckcard", type: "button", onclick: function () { playCard(c); } }, [
+        t("span", "cr", c.ro),
+        t("span", "cn", c.en),
+        t("span", "cd", c.text)
+      ]));
+    });
+    s.appendChild(deck);
+    return s;
+  }
+
+  function sheetRevive() {
+    var s = el("div", { class: "sheet" });
+    s.appendChild(el("div", { class: "grabber" }));
+    s.appendChild(t("div", "t-title2 voice", "Revival"));
+    if (!M.fallen || !M.fallen.length) {
+      s.appendChild(t("p", "t-sub", "Nothing has fallen yet."));
+      s.appendChild(el("button", { class: "btn plain", type: "button", text: "Close", onclick: function () { L.targeting = null; L.modal = null; render(); } }));
+      return s;
+    }
+    s.appendChild(t("p", "t-sub", "Choose the piece that comes back, then tap an empty square for it."));
+    var grid = el("div", { style: "display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px" });
+    M.fallen.forEach(function (fp, k) {
+      grid.appendChild(el("button", {
+        class: "deckcard", type: "button", style: "min-height:84px;align-items:center;justify-content:center",
+        "aria-label": "revive the " + (fp.c === "w" ? "white " : "black ") + PNAME[fp.t],
+        onclick: function () {
+          L.targeting = { cardId: "revive", stage: "place", pieceType: fp.t, pieceColour: fp.c, fallenIndex: k };
+          L.modal = null; L.say = "Tap an empty square for the " + PNAME[fp.t] + ".";
+          render();
+        }
+      }, [
+        el("span", { style: "font-size:28px;line-height:1;color:" + (fp.c === "w" ? "var(--piece-w)" : "var(--piece-b)") + ";text-shadow:" + (fp.c === "w" ? "0 1px 3px rgba(0,0,0,.7)" : "0 1px 2px rgba(246,240,224,.4)"), text: GLYPH[fp.t] }),
+        t("span", "t-cap2", PNAME[fp.t])
+      ]));
+    });
+    s.appendChild(grid);
+    return s;
+  }
+
+  function sheetCardEdit() {
+    var c = null;
+    M.cards.forEach(function (x) { if (x.id === L.editCardId) c = x; });
+    var s = el("div", { class: "sheet" });
+    s.appendChild(el("div", { class: "grabber" }));
+    if (!c) { s.appendChild(t("div", "t-title2", "Gone")); return s; }
+    s.appendChild(t("div", "t-cap caps", c.ro));
+    s.appendChild(el("div", { class: "t-title2 voice", style: "margin-top:4px", text: c.en }));
+    var def = CARD_BY[c.cardId];
+    if (def) s.appendChild(t("p", "t-sub", def.text));
+    s.appendChild(t("p", "t-foot", "In play since move " + c.fromMove + "."));
+
+    var st = el("div", { class: "stepper" });
+    st.appendChild(el("button", { type: "button", "aria-label": "Fewer turns", text: "−", onclick: function () { c.left = Math.max(1, c.left - 1); pushMatch(); } }));
+    st.appendChild(t("div", "v", c.left + (c.left === 1 ? " turn" : " turns")));
+    st.appendChild(el("button", { type: "button", "aria-label": "More turns", text: "+", onclick: function () { c.left = Math.min(5, c.left + 1); pushMatch(); } }));
+    s.appendChild(st);
+
+    s.appendChild(el("button", {
+      class: "btn destructive", type: "button", text: "Take it out of play",
+      onclick: function () {
+        M.cards = M.cards.filter(function (x) { return x.id !== L.editCardId; });
+        if (c.cardId === "river" || c.cardId === "flood") { M.barrier = []; M.barrierJumpable = true; }
+        L.modal = null; pushMatch();
+      }
+    }));
+    return s;
+  }
+
+  function sheetMenu() {
+    var s = el("div", { class: "sheet" });
+    s.appendChild(el("div", { class: "grabber" }));
+    s.appendChild(t("div", "t-title2 voice", "Match"));
+
+    s.appendChild(el("button", { class: "menurow", type: "button", onclick: function () { L.terrainMode = true; L.modal = null; L.sel = null; render(); } }, [
+      t("span", "ic", "≈"),
+      el("span", { class: "mid" }, [t("span", "t-head", "Mark the terrain"), t("span", "t-foot", "Copy your printed map onto the grid")])
+    ]));
+
+    var sw = el("span", { class: "switch" + (L.hints ? " on" : "") }); sw.appendChild(el("i"));
+    s.appendChild(el("button", { class: "menurow", type: "button", onclick: function () { L.hints = !L.hints; render(); } }, [
+      sw, el("span", { class: "mid" }, [t("span", "t-head", "Show where a piece can go"), t("span", "t-foot", "Dots on the squares it may reach")])
+    ]));
+
+    s.appendChild(el("button", {
+      class: "menurow", type: "button",
+      onclick: function () { M.turn = M.turn === "w" ? "b" : "w"; M.phase = "move"; L.modal = null; L.sel = null; L.say = ""; pushMatch(); }
+    }, [
+      t("span", "ic", "⇅"),
+      el("span", { class: "mid" }, [t("span", "t-head", "Hand the turn over"), t("span", "t-foot", "Skip a side without logging a move")])
+    ]));
+
+    s.appendChild(el("button", {
+      class: "btn tinted", type: "button", style: "margin-top:18px", text: "End & read the log",
+      onclick: function () { L.screen = "summary"; L.modal = null; render(); }
+    }));
+
+    // tucked away on purpose — for when a card leaves the board in a bad state
+    s.appendChild(el("div", { style: "margin-top:26px;padding-top:16px;border-top:1px solid var(--sep)" }, [
+      t("div", "t-cap2 caps", "If something goes wrong")
+    ]));
+    if (!L.confirmReset) {
+      s.appendChild(el("button", {
+        class: "menurow", type: "button", style: "margin-top:10px",
+        onclick: function () { L.confirmReset = true; render(); }
+      }, [
+        el("span", { class: "ic", style: "color:var(--red)", text: "↻" }),
+        el("span", { class: "mid" }, [
+          t("span", "t-head", "Reset the power-ups"),
+          t("span", "t-foot", "Clears every card in play and any water on the board. The moves stay.")
+        ])
+      ]));
+    } else {
+      s.appendChild(t("p", "t-sub", "This clears every card in play and any water on the board. The match and its moves are untouched."));
+      s.appendChild(el("button", { class: "btn destructive", type: "button", text: "Yes, clear them", onclick: resetPowerUps }));
+      s.appendChild(el("button", { class: "btn plain", type: "button", text: "Keep them", onclick: function () { L.confirmReset = false; render(); } }));
+    }
+    return s;
+  }
+
+  function sheetPromo() {
+    var s = el("div", { class: "sheet" });
+    s.appendChild(el("div", { class: "grabber" }));
+    s.appendChild(t("div", "t-title2 voice", "The pawn reached the end"));
+    s.appendChild(t("p", "t-sub", "What did it become?"));
+    var grid = el("div", { style: "display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px" });
+    ["q", "r", "b", "n", "p"].forEach(function (pt) {
+      grid.appendChild(el("button", {
+        class: "deckcard", type: "button", style: "min-height:82px;align-items:center;justify-content:center",
+        "aria-label": pt === "p" ? "stays a pawn" : "becomes a " + PNAME[pt],
+        onclick: function () {
+          var pp = L.pendingPromo;
+          if (!pp) { L.modal = null; return render(); }
+          applyMove(pp.from, pp.to, pt === "p" ? null : pt);
+        }
+      }, [
+        el("span", { style: "font-size:26px;line-height:1;color:" + (M.turn === "w" ? "var(--piece-w)" : "var(--piece-b)") + ";text-shadow:" + (M.turn === "w" ? "0 1px 3px rgba(0,0,0,.7)" : "0 1px 2px rgba(246,240,224,.4)"), text: GLYPH[pt] }),
+        t("span", "t-cap2", pt === "p" ? "stays" : PNAME[pt])
+      ]));
+    });
+    s.appendChild(grid);
+    return s;
+  }
+
+  // ───────── render ─────────
+  var app = document.getElementById("app");
+  var scrim = null, revealEl = null;
+
+  function render() {
+    clockEl = null;
+    var active = document.activeElement;
+    var aid = active && active.id ? active.id : null;
+    var caret = (active && typeof active.selectionStart === "number") ? active.selectionStart : null;
+
+    app.textContent = "";
+    if (L.screen === "start") app.appendChild(screenStart());
+    else if (L.screen === "pairHost") app.appendChild(screenPairHost());
+    else if (L.screen === "pairGuest") app.appendChild(screenPairGuest());
+    else if (L.screen === "waiting") app.appendChild(screenWaiting());
+    else if (L.screen === "summary") app.appendChild(screenSummary());
+    else app.appendChild(screenMatch());
+
+    if (scrim) { scrim.remove(); scrim = null; }
+    if (L.modal) {
+      scrim = el("div", { class: "scrim" });
+      scrim.appendChild(el("button", {
+        class: "dismiss", type: "button", "aria-label": "Close",
+        onclick: function () { L.modal = null; L.pendingPromo = null; L.confirmReset = false; render(); }
+      }));
+      scrim.appendChild(
+        L.modal === "cards" ? sheetCards()
+          : L.modal === "menu" ? sheetMenu()
+            : L.modal === "promo" ? sheetPromo()
+              : L.modal === "revive" ? sheetRevive()
+                : sheetCardEdit()
+      );
+      document.body.appendChild(scrim);
+    }
+
+    if (revealEl) { revealEl.remove(); revealEl = null; }
+    if (L.reveal) {
+      var c = L.reveal.card;
+      revealEl = el("div", { class: "reveal", onclick: function () { L.reveal = null; render(); } });
+      var card = el("div", { class: "bigcard" + (L.reveal.light ? " light" : "") });
+      card.appendChild(el("div", { class: "mark", text: "◆" }));
+      card.appendChild(t("div", "ro", c.ro));
+      card.appendChild(t("div", "en", c.en));
+      card.appendChild(t("div", "txt", c.text));
+      card.appendChild(t("div", "dur", L.reveal.dur + (L.reveal.dur === 1 ? " TURN" : " TURNS")));
+      revealEl.appendChild(card);
+      document.body.appendChild(revealEl);
+    }
+
+    if (aid) {
+      var again = document.getElementById(aid);
+      if (again && again !== document.activeElement) {
+        again.focus();
+        if (caret != null && typeof again.setSelectionRange === "function") {
+          try { again.setSelectionRange(caret, caret); } catch (e) { }
+        }
+      }
+    }
+  }
+
+  setInterval(function () {
+    L.now = Date.now();
+    if (clockEl) clockEl.textContent = clockText();
+  }, 1000);
+
+  boot();
+  render();
+})();
+</script>
