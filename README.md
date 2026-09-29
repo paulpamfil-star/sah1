@@ -8,7 +8,8 @@ prototype has neither. It is built for the stage before that: a wooden board wit
 the map printed over it, a phone standing next to it, and every move entered by
 hand.
 
-**Published canvas:** https://claude.ai/artifact/J12hreb7yw5R3K8VjcDCpG
+**The app (one or two phones):** https://claude.ai/artifact/WgKas38sCShyM9tB1bfT6B
+**Design canvas (reference boards):** https://claude.ai/artifact/J12hreb7yw5R3K8VjcDCpG
 
 ---
 
@@ -41,19 +42,46 @@ No check or checkmate detection. No castling in one tap (log the king, then the
 rook). No en passant. No per-player chess clock. No sensors, no Bluetooth. And
 nothing anywhere knows what a card or a terrain type does.
 
+## One phone or two
+
+The opening screen asks. Both paths run the same console.
+
+**One phone, between us.** The phone sits by the board and both players tap into
+it. Nothing networked; the match autosaves to that device.
+
+**Two phones, joined by a code.** One player starts a match and gets four
+letters. The other opens the same link, types those letters, and the two are
+live: every move, flag, card and terrain mark appears on both phones at once.
+Each phone shows the board from its own player's side and will only let that
+player move — your opponent's pieces sit back a shade and refuse the tap.
+
+The pairing runs on the artifact's shared document store: one document per match
+at `matches/<CODE>`, with both phones subscribed to it. The joining phone takes
+its seat under a short lease, so two people entering the same code cannot both
+claim White.
+
+**What two-phone play requires.** Both players must be signed in to the same
+Claude workspace and opening the same shared link. A page with a shared store is
+organization-internal and cannot be opened by a public link — that is a platform
+rule, not a setting. If the second player cannot be added to the workspace, the
+one-phone path is the whole game and loses nothing except the per-player view.
+
 ## Layout
 
 ```
+app/
+  index.html         the console — one phone or two, the thing you actually use
+
 canvas/project/
   canvas.json        the canvas index — frames, order, notes
-  Main.dc.html       the working console (390×844, interactive)
+  Main.dc.html       the single-phone console as a design artboard
   Anatomy.dc.html    every control explained, and the loop at the table
   Record.dc.html     what one move records, and where the rules plug in
   System.dc.html     palette, type, terrain marks, controls
 ```
 
-Each `.dc.html` is one self-contained artboard. `Main.dc.html` is the only
-interactive one — it is the app.
+`app/index.html` is the live app. The canvas holds the design reference — the
+control-by-control breakdown, the data contract, and the visual language.
 
 ## The record
 

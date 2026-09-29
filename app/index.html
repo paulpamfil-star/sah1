@@ -1,0 +1,1595 @@
+<title>Chess The Origins Console</title>
+<style>
+  /* One phone-shaped column: fixed head, fixed board, one flexible pane, fixed dock.
+     Single dark world on purpose — the game's own field. */
+  :root {
+    --ink: #0A1219;
+    --panel: #0D1A24;
+    --field: #101E29;
+    --line: #23394A;
+    --brass: #C8A44C;
+    --brass-dim: #A8935A;
+    --parchment: #EDE4D0;
+    --mist: #A9BAC6;
+    --slate: #8FA3B0;
+    --rust: #B85433;
+    --rust-text: #F0A183;
+    --moss: #A8CE8C;
+    --river: #7FB6D4;
+    --sq-light: #8A7B4E;
+    --sq-dark: #57492B;
+    --sq-light-hot: #9C8A50;
+    --sq-dark-hot: #6A5930;
+    --serif: 'EB Garamond', Georgia, 'Times New Roman', serif;
+    --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+    color-scheme: dark;
+  }
+
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--ink);
+    color: var(--parchment);
+    font-family: var(--serif);
+    font-size: 16px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  * { box-sizing: border-box; }
+  button { font-family: inherit; color: inherit; cursor: pointer; }
+  input { font-family: inherit; }
+  :focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+
+  .app { height: 100%; display: flex; flex-direction: column; overflow: hidden; }
+
+  /* ---------- shared bits ---------- */
+  .eyebrow { font-family: var(--mono); font-size: 10px; letter-spacing: 2.6px; color: var(--brass); font-weight: 700; }
+  .label { font-family: var(--mono); font-size: 9.5px; letter-spacing: 2.2px; color: var(--slate); display: block; }
+  .mono { font-family: var(--mono); }
+  .tnum { font-variant-numeric: tabular-nums; }
+
+  .field {
+    width: 100%; height: 52px; padding: 0 14px;
+    background: var(--field); border: 1px solid var(--line); border-radius: 3px;
+    color: var(--parchment); font-size: 18px; outline: none;
+  }
+  .field::placeholder { color: #6E8394; }
+
+  .btn {
+    height: 56px; border: none; border-radius: 3px;
+    background: var(--brass); color: #14202B;
+    font-family: var(--mono); font-size: 11.5px; letter-spacing: 2.2px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .btn.ghost { background: transparent; border: 1px solid var(--line); color: var(--mist); font-weight: 400; letter-spacing: 1.6px; font-size: 10.5px; height: 48px; }
+  .btn.outline { background: transparent; border: 1px solid var(--brass); color: var(--brass); }
+  .btn:disabled { opacity: .45; cursor: default; }
+
+  .stack { display: flex; flex-direction: column; gap: 14px; }
+
+  /* ---------- scroll panes ---------- */
+  .scroll { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .scroll::-webkit-scrollbar { width: 3px; height: 3px; }
+  .scroll::-webkit-scrollbar-thumb { background: #2A4356; border-radius: 2px; }
+
+  /* ---------- setup / pairing ---------- */
+  .sheetpage { flex: 1; min-height: 0; padding: 0 16px; padding-block: 30px 24px; }
+  .wordmark { font-family: var(--mono); font-size: 11px; letter-spacing: 3.4px; color: var(--brass); font-weight: 700; }
+  h1.title { margin: 22px 0 0; font-size: clamp(34px, 11vw, 46px); line-height: .96; font-weight: 500; text-wrap: balance; }
+  .rule { margin-top: 14px; width: 54px; height: 2px; background: var(--brass); }
+  .lede { margin: 16px 0 0; font-size: 16.5px; line-height: 1.5; color: var(--mist); font-style: italic; }
+
+  .choice {
+    width: 100%; padding: 16px 15px; text-align: left;
+    background: var(--field); border: 1px solid var(--line); border-radius: 4px;
+    display: flex; gap: 13px; align-items: flex-start;
+  }
+  .choice[aria-pressed="true"] { border-color: var(--brass); background: #16242F; }
+  .choice .ct { font-size: 19px; display: block; }
+  .choice .cs { font-size: 15px; color: var(--slate); display: block; margin-top: 3px; line-height: 1.35; }
+  .choice .cd { width: 26px; flex: 0 0 auto; text-align: center; font-size: 19px; color: var(--brass); }
+
+  .codebox {
+    margin-top: 18px; padding: 22px 16px; text-align: center;
+    border: 1px solid var(--brass); border-radius: 4px; background: #12202B;
+  }
+  .codebox .code {
+    font-family: var(--mono); font-size: clamp(42px, 16vw, 62px); letter-spacing: 12px;
+    color: var(--brass); font-weight: 700; line-height: 1; padding-left: 12px;
+  }
+  .codeinput {
+    width: 100%; height: 72px; text-align: center;
+    font-family: var(--mono); font-size: 36px; letter-spacing: 14px; padding-left: 14px;
+    background: var(--field); border: 1px solid var(--line); border-radius: 3px;
+    color: var(--parchment); outline: none; text-transform: uppercase;
+  }
+
+  .sidepick { display: flex; gap: 8px; }
+  .sidepick button {
+    flex: 1; height: 76px; border-radius: 3px; background: var(--field);
+    border: 1px solid var(--line); display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 5px;
+  }
+  .sidepick button[aria-pressed="true"] { border-color: var(--brass); background: #16242F; }
+  .sidepick .g { font-size: 28px; line-height: 1; }
+  .sidepick .n { font-family: var(--mono); font-size: 8.5px; letter-spacing: 1.6px; color: var(--slate); }
+
+  .note { margin: 18px 0 0; font-size: 15px; line-height: 1.45; color: var(--slate); }
+  .warn {
+    margin-top: 14px; padding: 12px 14px; border-radius: 3px;
+    border: 1px solid #6E3A26; background: rgba(184,84,51,.14);
+    font-size: 15px; line-height: 1.4; color: var(--rust-text);
+  }
+
+  /* ---------- match chrome ---------- */
+  .bar {
+    flex: 0 0 auto; height: 44px; padding: 0 16px;
+    display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #1B2D3B;
+  }
+  .bar .sess { flex: 1; min-width: 0; font-family: var(--mono); font-size: 10px; color: var(--slate); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+
+  .link { display: inline-flex; align-items: center; gap: 5px; font-family: var(--mono); font-size: 9px; letter-spacing: 1.2px; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: #64798A; flex: 0 0 auto; }
+  .dot.on { background: var(--moss); }
+
+  .band { flex: 0 0 auto; padding: 12px 16px; border-bottom: 1px solid #1B2D3B; }
+  .band.hot { background: #16242F; }
+  .band .row1 { display: flex; align-items: center; gap: 9px; }
+  .band .turn { width: 12px; height: 12px; border-radius: 50%; flex: 0 0 auto; border: 1px solid var(--slate); }
+  .band h2 { margin: 0; flex: 1; min-width: 0; font-size: clamp(20px, 6vw, 24px); line-height: 1.1; font-weight: 500; }
+  .band .meta { font-family: var(--mono); font-size: 9.5px; letter-spacing: 1.4px; color: var(--slate); flex: 0 0 auto; }
+  .band .row2 { margin-top: 6px; display: flex; align-items: center; gap: 10px; }
+  .band .sub { flex: 1; min-width: 0; font-size: 16px; line-height: 1.35; color: var(--mist); }
+  .band .sub.nudge { color: var(--rust-text); }
+
+  .chip {
+    height: 36px; padding: 0 12px; border-radius: 2px; background: transparent;
+    border: 1px solid #8A4630; color: var(--rust-text);
+    font-family: var(--mono); font-size: 9px; letter-spacing: 1.2px; flex: 0 0 auto;
+  }
+  .chip.on { background: var(--rust); border-color: var(--rust); color: #fff; }
+  .chip.brass { border-color: var(--brass); color: var(--brass); }
+
+  /* ---------- board ---------- */
+  .boardwrap { flex: 0 0 auto; padding: 11px 16px 3px; display: flex; gap: 5px; justify-content: center; }
+  .ranks { display: flex; flex-direction: column; width: 11px; flex: 0 0 auto; }
+  .ranks div, .files div { display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 8.5px; color: var(--slate); }
+  .ranks div { flex: 1; }
+  .boardcol { width: 100%; max-width: 360px; }
+  .board { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); border: 1px solid #3E5566; }
+  .sq {
+    position: relative; aspect-ratio: 1; padding: 0; margin: 0; border: none;
+    display: flex; align-items: center; justify-content: center; background: var(--sq-dark);
+  }
+  .sq.lt { background: var(--sq-light); }
+  .sq.hot { background: var(--sq-dark-hot); }
+  .sq.lt.hot { background: var(--sq-light-hot); }
+  .sq.sel { box-shadow: inset 0 0 0 3px var(--brass); }
+  .sq .tint { position: absolute; inset: 0; }
+  .sq .tmark { position: absolute; left: 2px; top: 1px; font-size: 12px; line-height: 1; text-shadow: 0 1px 2px rgba(0,0,0,.85); }
+  .sq .pc { position: relative; font-size: clamp(22px, 7.2vw, 30px); line-height: 1; }
+  .sq .pc.w { color: #F4EDDC; text-shadow: 0 1px 3px rgba(0,0,0,.7); }
+  .sq .pc.b { color: #12202B; text-shadow: 0 1px 2px rgba(240,232,212,.28); }
+  .sq .pc.dim { opacity: .8; }
+  .sq .hint { position: absolute; width: 26%; height: 26%; border-radius: 50%; background: rgba(12,20,28,.45); border: 2px solid var(--brass); }
+  .files { display: flex; }
+  .files div { flex: 1; height: 14px; }
+
+  /* ---------- legend + cards ---------- */
+  .legend { flex: 0 0 auto; padding: 4px 16px 7px; display: flex; gap: 5px; }
+  .legend div { flex: 1; min-width: 0; height: 24px; border-radius: 2px; display: flex; align-items: center; justify-content: center; gap: 4px; }
+  .legend .m { font-size: 11px; line-height: 1; }
+  .legend .n { font-family: var(--mono); font-size: 7.5px; letter-spacing: .5px; color: var(--mist); }
+
+  .rail { flex: 0 0 auto; padding: 0 16px 8px; display: flex; align-items: center; gap: 7px; min-height: 40px; }
+  .rail .k { font-family: var(--mono); font-size: 8.5px; letter-spacing: 1.6px; color: var(--slate); flex: 0 0 auto; }
+  .rail .strip { flex: 1; min-width: 0; display: flex; gap: 6px; overflow-x: auto; }
+  .rail .empty { font-size: 15px; color: #7E93A1; font-style: italic; }
+  .card {
+    flex: 0 0 auto; height: 32px; padding: 0 9px; display: flex; align-items: center; gap: 7px;
+    border: 1px solid var(--brass); border-radius: 2px; background: #1B2A1C;
+  }
+  .card .cn { font-family: var(--mono); font-size: 9px; letter-spacing: 1.2px; color: var(--brass); font-weight: 700; }
+  .card .cl { font-family: var(--mono); font-size: 9px; color: var(--mist); }
+
+  /* ---------- pane: log or resolve ---------- */
+  .pane { flex: 1; min-height: 0; border-top: 1px solid #1B2D3B; }
+  .pane.resolve { border-top-color: var(--brass); background: var(--field); padding: 10px 16px 14px; }
+  .pane .hint { padding: 14px 16px; font-size: 16px; color: #7E93A1; font-style: italic; line-height: 1.4; }
+
+  .move { padding: 7px 16px; display: flex; align-items: baseline; gap: 10px; border-bottom: 1px solid #16242F; }
+  .move.last { background: rgba(200,164,76,.07); }
+  .move .n { font-family: var(--mono); font-size: 10px; color: var(--slate); width: 26px; flex: 0 0 auto; }
+  .move .s { font-family: var(--mono); font-size: 13px; color: var(--mist); flex: 0 0 auto; }
+  .move.last .s { color: var(--parchment); }
+  .move .tags { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; gap: 4px; align-items: baseline; }
+  .tag { font-family: var(--mono); font-size: 8.5px; letter-spacing: 1.1px; padding: 2px 5px; border-radius: 2px; }
+  .tag.mine { color: var(--rust-text); background: rgba(184,84,51,.24); }
+  .tag.card { color: var(--brass); background: rgba(200,164,76,.18); }
+  .tag.plain { color: var(--mist); background: rgba(90,120,142,.24); }
+  .tag.terr { color: var(--moss); background: rgba(110,130,87,.26); }
+  .move .note { font-size: 14px; color: var(--slate); font-style: italic; }
+
+  .flags { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; margin-top: 9px; }
+  .flags button {
+    height: 50px; border-radius: 3px; background: #0B1620; border: 1px solid var(--line);
+    font-size: 17px; font-family: var(--serif);
+  }
+  .flags button[aria-pressed="true"] { background: var(--brass); border-color: var(--brass); color: #14202B; }
+  .flags button.r[aria-pressed="true"] { background: var(--rust); border-color: var(--rust); color: #fff; }
+
+  /* ---------- dock ---------- */
+  .dock {
+    flex: 0 0 auto; display: flex; border-top: 1px solid var(--line); background: var(--panel);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .dock button { flex: 1; height: 58px; background: transparent; border: none; border-right: 1px solid #1B2D3B; font-size: 18px; }
+  .dock button:last-child { border-right: none; }
+  .dock button:disabled { color: #64798A; }
+
+  /* ---------- modal ---------- */
+  .veil { position: fixed; inset: 0; background: rgba(6,11,16,.8); display: flex; flex-direction: column; justify-content: flex-end; z-index: 20; }
+  .veil > .tap { flex: 1; background: transparent; border: none; }
+  .modal {
+    flex: 0 0 auto; background: var(--field); border-top: 1px solid var(--brass);
+    padding: 18px 16px; padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+    max-height: 76vh; overflow-y: auto;
+  }
+  .shelf { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 13px; }
+  .shelf button {
+    min-height: 76px; padding: 10px 9px; border: 1px solid var(--brass); border-radius: 3px;
+    background: #12202B; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  }
+  .shelf .pip { width: 24px; height: 24px; border-radius: 50%; background: var(--brass); color: #14202B; display: flex; align-items: center; justify-content: center; font-size: 11px; }
+  .shelf .nm { font-size: 16px; line-height: 1.15; text-align: center; }
+
+  .stepper { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+  .stepper button { width: 54px; height: 54px; border: 1px solid var(--line); border-radius: 2px; background: transparent; font-size: 22px; }
+  .stepper .v { flex: 1; text-align: center; font-family: var(--mono); font-size: 24px; }
+
+  .menu button {
+    width: 100%; min-height: 60px; padding: 10px 15px; margin-top: 8px;
+    display: flex; align-items: center; gap: 13px; text-align: left;
+    border: 1px solid var(--line); border-radius: 3px; background: #0B1620;
+  }
+  .menu .ic { width: 34px; flex: 0 0 auto; text-align: center; font-size: 17px; color: var(--brass); }
+  .menu .mt { font-size: 18px; display: block; }
+  .menu .ms { font-size: 14.5px; color: var(--slate); display: block; margin-top: 1px; line-height: 1.3; }
+  .toggle { width: 34px; height: 22px; border-radius: 11px; background: var(--line); display: flex; align-items: center; padding: 2px; flex: 0 0 auto; }
+  .toggle.on { background: var(--brass); justify-content: flex-end; }
+  .toggle i { width: 18px; height: 18px; border-radius: 50%; background: var(--slate); display: block; }
+  .toggle.on i { background: #14202B; }
+
+  .terrpick { display: flex; gap: 6px; padding: 8px 16px; border-bottom: 1px solid #1B2D3B; flex: 0 0 auto; }
+  .terrpick button { flex: 1; height: 50px; border-radius: 3px; background: var(--field); border: 1px solid var(--line); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; }
+  .terrpick .m { font-size: 15px; line-height: 1; }
+  .terrpick .n { font-family: var(--mono); font-size: 7.5px; letter-spacing: .6px; }
+
+  pre.out {
+    margin: 0; font-family: var(--mono); font-size: 10.5px; line-height: 1.6;
+    color: var(--mist); white-space: pre; user-select: text;
+  }
+  .segs { display: flex; gap: 7px; }
+  .segs button { flex: 1; height: 42px; border-radius: 2px; background: transparent; border: 1px solid var(--line); color: var(--mist); font-family: var(--mono); font-size: 9.5px; letter-spacing: 1.6px; }
+  .segs button[aria-pressed="true"] { background: var(--brass); border-color: var(--brass); color: #14202B; }
+  .stats { display: flex; gap: 20px; margin-top: 11px; }
+  .stats .k { font-family: var(--mono); font-size: 8.5px; letter-spacing: 1.4px; color: var(--slate); }
+  .stats .v { font-family: var(--mono); font-size: 17px; margin-top: 2px; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .sq, .btn, .choice { transition: background-color .12s ease, border-color .12s ease; }
+  }
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;700&display=swap">
+
+<div class="app" id="app"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ───────────────────────── constants ─────────────────────────
+  var GLYPH = { k: "♚︎", q: "♛︎", r: "♜︎", b: "♝︎", n: "♞︎", p: "♟︎" };
+  var PNAME = { k: "king", q: "queen", r: "rook", b: "bishop", n: "knight", p: "pawn" };
+  var PLETTER = { k: "K", q: "Q", r: "R", b: "B", n: "N", p: "" };
+  var CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+
+  var TERRAIN = [
+    { id: "mountain", short: "MTN", name: "MOUNTAIN", mark: "▲", color: "#E4D9C4", tint: "rgba(214,206,190,.34)" },
+    { id: "river", short: "RIVER", name: "RIVER", mark: "≈", color: "#BFE2F5", tint: "rgba(60,135,180,.46)" },
+    { id: "trench", short: "TRNCH", name: "TRENCH", mark: "═", color: "#F3C3A8", tint: "rgba(168,78,44,.42)" },
+    { id: "village", short: "VLG", name: "VILLAGE", mark: "⌂", color: "#D3EBBA", tint: "rgba(104,148,72,.44)" },
+    { id: "erase", short: "CLEAR", name: "CLEAR", mark: "×", color: "#C7D6E0", tint: "transparent" }
+  ];
+  var TBY = {}; TERRAIN.forEach(function (t) { TBY[t.id] = t; });
+
+  var RESOLVE = [
+    { tag: "MINE", label: "Mine", cls: "r" },
+    { tag: "TERRAIN", label: "Terrain event", cls: "" },
+    { tag: "CARD", label: "Card played", cls: "" },
+    { tag: "REFUSED", label: "Move refused", cls: "r" },
+    { tag: "CHECK", label: "Check", cls: "" }
+  ];
+
+  // ───────────────────────── local (this device) ─────────────────────────
+  var L = {
+    screen: "start",          // start | pairHost | pairGuest | waiting | match | summary
+    mode: "solo",             // solo | host | guest
+    mySide: null,             // 'w' | 'b' | null (solo = both)
+    code: "",
+    codeDraft: "",
+    session: "Playtest 01",
+    myName: "",
+    pickSide: "w",
+    sel: null,
+    override: false,
+    nudge: "",
+    modal: null,              // cards | menu | promo | card-edit
+    editCardId: null,
+    terrainMode: false,
+    terrainPick: "mountain",
+    hints: true,
+    noteOpen: false,
+    pendingPromo: null,
+    cardDraft: "",
+    cardDur: 3,
+    shelf: ["Fog of war"],
+    exportFmt: "text",
+    copied: "",
+    linked: false,            // other player seen in the room
+    dbErr: "",
+    busy: false,
+    now: Date.now()
+  };
+
+  // ───────────────────────── shared match state ─────────────────────────
+  function startBoard() {
+    var back = ["r", "n", "b", "q", "k", "b", "n", "r"], b = [], i;
+    for (i = 0; i < 64; i++) b.push(null);
+    for (i = 0; i < 8; i++) {
+      b[i] = { t: back[i], c: "b" };
+      b[8 + i] = { t: "p", c: "b" };
+      b[48 + i] = { t: "p", c: "w" };
+      b[56 + i] = { t: back[i], c: "w" };
+    }
+    return b;
+  }
+
+  function freshMatch() {
+    return {
+      v: 1,
+      session: "Playtest 01",
+      white: null,            // {id, name}
+      black: null,
+      board: startBoard(),
+      turn: "w",
+      moveNo: 1,
+      phase: "move",          // move | resolve
+      log: [],
+      cards: [],
+      terrain: {},
+      lastMove: null,
+      startedAt: Date.now(),
+      nextId: 1
+    };
+  }
+
+  var M = freshMatch();
+
+  // ───────────────────────── capabilities ─────────────────────────
+  var db = null, room = null, userCap = null, myId = null;
+  var matchRef = null, unsubDoc = null, unsubPeers = null;
+
+  function deviceId() {
+    try {
+      var k = "cto-device-id", v = window.localStorage.getItem(k);
+      if (!v) { v = "d" + Math.random().toString(36).slice(2, 12); window.localStorage.setItem(k, v); }
+      return v;
+    } catch (e) {
+      return "d" + Math.random().toString(36).slice(2, 12);
+    }
+  }
+
+  function bootCapabilities() {
+    if (!window.claude || !window.claude.use) { myId = deviceId(); return; }
+    window.claude.use("user").then(function (u) {
+      userCap = u;
+      return u ? u.id() : null;
+    }).then(function (id) {
+      myId = id || deviceId();
+    }).catch(function () { myId = deviceId(); });
+
+    window.claude.use("db").then(function (d) { db = d; render(); }).catch(function () { db = null; });
+    window.claude.use("room").then(function (r) {
+      room = r;
+      if (!r) return;
+      unsubPeers = r.onPeers(function (ch) {
+        var others = ch.peers.filter(function (p) { return !p.isMe && p.kind === "viewer"; });
+        var linked = others.length > 0;
+        if (linked !== L.linked) { L.linked = linked; render(); }
+      }, function () { });
+    }).catch(function () { room = null; });
+  }
+
+  // ───────────────────────── persistence (solo) ─────────────────────────
+  var LKEY = "cto-solo-v1";
+  function saveSolo() {
+    if (L.mode !== "solo") return;
+    try { window.localStorage.setItem(LKEY, JSON.stringify(M)); } catch (e) { }
+  }
+  function loadSolo() {
+    try {
+      var raw = window.localStorage.getItem(LKEY);
+      if (!raw) return null;
+      var o = JSON.parse(raw);
+      return (o && o.board && o.board.length === 64) ? o : null;
+    } catch (e) { return null; }
+  }
+
+  // ───────────────────────── sync ─────────────────────────
+  function newCode() {
+    var s = "";
+    for (var i = 0; i < 4; i++) s += CODE_ALPHABET.charAt(Math.floor(Math.random() * CODE_ALPHABET.length));
+    return s;
+  }
+
+  function pushMatch() {
+    if (L.mode === "solo") { saveSolo(); render(); return Promise.resolve(); }
+    render();
+    if (!matchRef) return Promise.resolve();
+    return matchRef.set(M).catch(function (e) {
+      L.dbErr = e && e.code === "revoked" ? "Lost access to this match." : "Could not save that move. Check the link.";
+      render();
+    });
+  }
+
+  function watchMatch(code) {
+    if (!db) return;
+    if (unsubDoc) { unsubDoc(); unsubDoc = null; }
+    matchRef = db.doc("matches/" + code);
+    unsubDoc = matchRef.onSnapshot(function (snap) {
+      if (!snap.exists) return;
+      var d = snap.data();
+      if (!d || !d.board) return;
+      if (snap.metadata && snap.metadata.hasPendingWrites) return; // our own echo
+      M = d;
+      if (L.screen === "waiting" && M.white && M.black) L.screen = "match";
+      render();
+    }, function (e) {
+      L.dbErr = e.code === "not_granted"
+        ? "This device cannot join live matches."
+        : "The live connection dropped. Reload to reconnect.";
+      render();
+    });
+  }
+
+  // ───────────────────────── chess reach ─────────────────────────
+  function reach(board, from) {
+    var p = board[from];
+    if (!p) return {};
+    var out = {}, r = Math.floor(from / 8), f = from % 8, a, dr, df;
+    function put(rr, ff, mode) {
+      if (rr < 0 || rr > 7 || ff < 0 || ff > 7) return false;
+      var q = board[rr * 8 + ff];
+      if (q && q.c === p.c) return false;
+      if (mode === "quiet" && q) return false;
+      if (mode === "cap" && !q) return false;
+      out[rr * 8 + ff] = true;
+      return !q;
+    }
+    function slide(sr, sf) {
+      var rr = r + sr, ff = f + sf;
+      while (put(rr, ff, "any")) { rr += sr; ff += sf; }
+    }
+    var t = p.t;
+    if (t === "p") {
+      var dir = p.c === "w" ? -1 : 1, home = p.c === "w" ? 6 : 1;
+      if (put(r + dir, f, "quiet") && r === home) put(r + 2 * dir, f, "quiet");
+      put(r + dir, f - 1, "cap");
+      put(r + dir, f + 1, "cap");
+    } else if (t === "n") {
+      var j = [[-2, -1], [-2, 1], [-1, -2], [-1, 2], [1, -2], [1, 2], [2, -1], [2, 1]];
+      for (a = 0; a < j.length; a++) put(r + j[a][0], f + j[a][1], "any");
+    } else if (t === "k") {
+      for (dr = -1; dr <= 1; dr++) for (df = -1; df <= 1; df++) if (dr || df) put(r + dr, f + df, "any");
+    } else {
+      if (t === "r" || t === "q") { slide(-1, 0); slide(1, 0); slide(0, -1); slide(0, 1); }
+      if (t === "b" || t === "q") { slide(-1, -1); slide(-1, 1); slide(1, -1); slide(1, 1); }
+    }
+    return out;
+  }
+
+  // ───────────────────────── helpers ─────────────────────────
+  function sqName(i) { return "abcdefgh".charAt(i % 8) + String(8 - Math.floor(i / 8)); }
+  function idxOf(n) { return (8 - parseInt(n.charAt(1), 10)) * 8 + "abcdefgh".indexOf(n.charAt(0)); }
+  function typeOf(n) { return { king: "k", queen: "q", rook: "r", bishop: "b", knight: "n", pawn: "p" }[n] || "q"; }
+  function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+  function sideName(c) {
+    var seat = c === "w" ? M.white : M.black;
+    if (seat && seat.name) return seat.name;
+    return c === "w" ? "White" : "Black";
+  }
+  function myTurn() {
+    if (L.mode === "solo") return true;
+    return L.mySide === M.turn;
+  }
+  function flipped() {
+    return L.mySide === "b";
+  }
+  function clockText() {
+    var secs = Math.max(0, Math.floor((L.now - (M.startedAt || L.now)) / 1000));
+    var m = Math.floor(secs / 60), s = secs % 60;
+    return (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
+  }
+  function lastMove() { return M.log.length ? M.log[M.log.length - 1] : null; }
+
+  // ───────────────────────── actions ─────────────────────────
+  function tapSquare(i) {
+    L.dbErr = "";
+    if (L.terrainMode) return paintTerrain(i);
+
+    if (M.phase === "resolve") {
+      L.nudge = "Finish this turn first — tell it what happened below.";
+      return render();
+    }
+    if (!myTurn()) {
+      L.nudge = "It is " + sideName(M.turn) + "’s move, on the other phone.";
+      return render();
+    }
+
+    var p = M.board[i];
+
+    if (L.sel === null) {
+      if (!p) { L.nudge = "Nothing on " + sqName(i) + "."; return render(); }
+      if (p.c !== M.turn && !L.override) {
+        L.nudge = "That one is " + sideName(p.c) + "’s. " + sideName(M.turn) + " to move.";
+        return render();
+      }
+      L.sel = i; L.nudge = ""; return render();
+    }
+
+    if (L.sel === i) { L.sel = null; L.nudge = ""; return render(); }
+
+    var mover = M.board[L.sel];
+    if (!mover) { L.sel = null; return render(); }
+
+    if (p && p.c === mover.c && !L.override) { L.sel = i; L.nudge = ""; return render(); }
+
+    if (!L.override && !reach(M.board, L.sel)[i]) {
+      L.nudge = "A " + PNAME[mover.t] + " cannot reach " + sqName(i) + ". Tap Break the rule if a card or the terrain allows it.";
+      return render();
+    }
+
+    var lastRank = mover.c === "w" ? 0 : 7;
+    if (mover.t === "p" && Math.floor(i / 8) === lastRank) {
+      L.pendingPromo = { from: L.sel, to: i };
+      L.modal = "promo"; L.sel = null; L.nudge = "";
+      return render();
+    }
+    applyMove(L.sel, i, null);
+  }
+
+  function applyMove(from, to, promoteTo) {
+    var mover = M.board[from], target = M.board[to];
+    var board = M.board.slice();
+    board[to] = promoteTo ? { t: promoteTo, c: mover.c } : mover;
+    board[from] = null;
+
+    var san = PLETTER[mover.t] + sqName(from) + (target ? "×" : "–") + sqName(to);
+    if (promoteTo) san += "=" + PLETTER[promoteTo];
+
+    var tags = [];
+    if (target) tags.push("CAPTURE");
+    if (L.override) tags.push("OVERRIDE");
+
+    M.board = board;
+    M.log = M.log.concat([{
+      id: M.nextId, ply: M.log.length + 1, no: M.moveNo, side: M.turn, san: san,
+      from: sqName(from), to: sqName(to), piece: PNAME[mover.t],
+      captured: target ? PNAME[target.t] : null,
+      promotedTo: promoteTo ? PNAME[promoteTo] : null,
+      terrainFrom: M.terrain[from] || null, terrainTo: M.terrain[to] || null,
+      by: L.mySide || "both",
+      tags: tags, note: "", at: Date.now() - (M.startedAt || Date.now())
+    }]);
+    M.lastMove = { from: from, to: to };
+    M.phase = "resolve";
+    M.nextId += 1;
+
+    L.sel = null; L.override = false; L.nudge = ""; L.noteOpen = false;
+    L.pendingPromo = null; L.modal = null;
+    pushMatch();
+  }
+
+  function endTurn() {
+    var kept = [];
+    for (var i = 0; i < M.cards.length; i++) {
+      var left = M.cards[i].left - 1;
+      if (left > 0) { var c = {}; for (var k in M.cards[i]) c[k] = M.cards[i][k]; c.left = left; kept.push(c); }
+    }
+    M.cards = kept;
+    M.phase = "move";
+    M.turn = M.turn === "w" ? "b" : "w";
+    if (M.log.length && M.log[M.log.length - 1].side === "b") M.moveNo += 1;
+    L.nudge = ""; L.noteOpen = false; L.sel = null;
+    pushMatch();
+  }
+
+  function toggleTag(tag) {
+    var lm = lastMove();
+    if (!lm) return;
+    var log = M.log.slice(), last = {}, k;
+    for (k in lm) last[k] = lm[k];
+    var tags = last.tags.slice(), at = tags.indexOf(tag);
+    if (at >= 0) tags.splice(at, 1); else tags.push(tag);
+    last.tags = tags;
+    log[log.length - 1] = last;
+    M.log = log;
+    pushMatch();
+  }
+
+  var noteTimer = null;
+  function setNote(v) {
+    var lm = lastMove();
+    if (!lm) return;
+    var log = M.log.slice(), last = {}, k;
+    for (k in lm) last[k] = lm[k];
+    last.note = v;
+    log[log.length - 1] = last;
+    M.log = log;
+    // typing is per-keystroke; the store is not
+    if (noteTimer) clearTimeout(noteTimer);
+    noteTimer = setTimeout(function () {
+      noteTimer = null;
+      if (L.mode === "solo") saveSolo();
+      else if (matchRef) matchRef.set(M).catch(function () { });
+    }, 600);
+  }
+
+  function undoLast() {
+    if (!M.log.length) return;
+    var keep = M.log.slice(0, M.log.length - 1);
+    var removed = M.log[M.log.length - 1];
+    var board = startBoard();
+    for (var k = 0; k < keep.length; k++) {
+      var m = keep[k], fi = idxOf(m.from), ti = idxOf(m.to), mv = board[fi];
+      if (!mv) continue;
+      board[ti] = m.promotedTo ? { t: typeOf(m.promotedTo), c: mv.c } : mv;
+      board[fi] = null;
+    }
+    var last = keep.length ? keep[keep.length - 1] : null;
+    M.board = board;
+    M.log = keep;
+    M.lastMove = last ? { from: idxOf(last.from), to: idxOf(last.to) } : null;
+    if (M.phase === "move") { M.turn = removed.side; M.moveNo = removed.no; }
+    M.phase = "move";
+    L.sel = null; L.override = false; L.nudge = ""; L.noteOpen = false;
+    pushMatch();
+  }
+
+  function paintTerrain(i) {
+    var t = {}, k;
+    for (k in M.terrain) t[k] = M.terrain[k];
+    if (L.terrainPick === "erase") delete t[i]; else t[i] = L.terrainPick;
+    M.terrain = t;
+    pushMatch();
+  }
+
+  function playCard(name) {
+    var clean = (name || "").trim();
+    if (!clean) return;
+    M.cards = M.cards.concat([{
+      id: M.nextId, name: clean.toUpperCase().slice(0, 18),
+      left: L.cardDur, fromMove: M.moveNo, by: L.mySide || "both"
+    }]);
+    M.nextId += 1;
+    L.modal = null; L.cardDraft = "";
+    pushMatch();
+  }
+
+  // ───────────────────────── export ─────────────────────────
+  function terrainList() {
+    var out = [], k;
+    for (k in M.terrain) {
+      if (!Object.prototype.hasOwnProperty.call(M.terrain, k)) continue;
+      var d = TBY[M.terrain[k]];
+      out.push({ square: sqName(parseInt(k, 10)), terrain: M.terrain[k], label: d ? d.name : M.terrain[k] });
+    }
+    out.sort(function (a, b) { return a.square < b.square ? -1 : 1; });
+    return out;
+  }
+
+  function exportText() {
+    if (L.exportFmt === "json") {
+      return JSON.stringify({
+        game: "Chess The Origins",
+        session: M.session,
+        code: L.code || null,
+        white: M.white, black: M.black,
+        length: clockText(),
+        terrain: terrainList(),
+        moves: M.log,
+        cardsInPlay: M.cards
+      }, null, 2);
+    }
+    var A = [];
+    A.push("CHESS THE ORIGINS — PLAYTEST LOG");
+    A.push("");
+    A.push("Session  " + M.session);
+    if (L.code) A.push("Code     " + L.code);
+    A.push("White    " + sideName("w"));
+    A.push("Black    " + sideName("b"));
+    A.push("Length   " + clockText());
+    A.push("Moves    " + M.log.length);
+    var terr = terrainList();
+    if (terr.length) {
+      A.push("");
+      A.push("TERRAIN");
+      A.push("  " + terr.map(function (t) { return t.square + " " + t.label; }).join("  "));
+    }
+    A.push("");
+    A.push("  #  SIDE  MOVE        FLAGS");
+    A.push("  " + new Array(46).join("─"));
+    for (var i = 0; i < M.log.length; i++) {
+      var m = M.log[i], n = String(m.no);
+      while (n.length < 3) n = " " + n;
+      var s = m.san;
+      while (s.length < 11) s += " ";
+      A.push(("  " + n + "  " + (m.side === "w" ? "W " : " B") + "   " + s + " " + m.tags.join(" ")).replace(/\s+$/, ""));
+      if (m.note) A.push("                       └ " + m.note);
+    }
+    if (M.cards.length) {
+      A.push("");
+      A.push("CARDS STILL IN PLAY");
+      M.cards.forEach(function (c) { A.push("  " + c.name + "  ·  " + c.left + " left  ·  from move " + c.fromMove); });
+    }
+    return A.join("\n");
+  }
+
+  function doCopy(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () {
+        L.copied = "yes"; render();
+        setTimeout(function () { L.copied = ""; render(); }, 2000);
+      }, function () { L.copied = "manual"; render(); });
+    } else { L.copied = "manual"; render(); }
+  }
+
+  // ───────────────────────── DOM helpers ─────────────────────────
+  function el(tag, attrs, kids) {
+    var n = document.createElement(tag), k;
+    if (attrs) for (k in attrs) {
+      if (k === "class") n.className = attrs[k];
+      else if (k === "text") n.textContent = attrs[k];
+      else if (k === "html") n.innerHTML = attrs[k];
+      else if (k.slice(0, 2) === "on") n.addEventListener(k.slice(2), attrs[k]);
+      else if (attrs[k] === true) n.setAttribute(k, "");
+      else if (attrs[k] !== false && attrs[k] != null) n.setAttribute(k, attrs[k]);
+    }
+    if (kids) kids.forEach(function (c) { if (c) n.appendChild(c); });
+    return n;
+  }
+  function txt(tag, cls, s) { return el(tag, { class: cls, text: s }); }
+
+  // ───────────────────────── screens ─────────────────────────
+  function screenStart() {
+    var saved = loadSolo();
+    var wrap = el("div", { class: "sheetpage scroll" });
+
+    wrap.appendChild(txt("div", "wordmark", "SAHSAH"));
+    var h = el("h1", { class: "title" });
+    h.appendChild(document.createTextNode("Chess"));
+    h.appendChild(el("br"));
+    h.appendChild(document.createTextNode("The Origins"));
+    wrap.appendChild(h);
+    wrap.appendChild(el("div", { class: "rule" }));
+    wrap.appendChild(txt("div", "label", "PLAYTEST CONSOLE"));
+    wrap.appendChild(txt("p", "lede", "You play on the wood. After each move you tap it here, and the console tells you what it sees and asks what happened."));
+
+    var form = el("div", { class: "stack", style: "margin-top:22px" });
+    var lbl = el("label", { class: "label", for: "f-session", text: "SESSION" });
+    var inp = el("input", {
+      class: "field", id: "f-session", type: "text", value: L.session,
+      oninput: function (e) { L.session = e.target.value; }
+    });
+    form.appendChild(el("div", { class: "stack", style: "gap:7px" }, [lbl, inp]));
+    wrap.appendChild(form);
+
+    wrap.appendChild(txt("div", "label", "HOW ARE YOU PLAYING?"));
+    var picks = el("div", { class: "stack", style: "gap:8px;margin-top:10px" });
+
+    picks.appendChild(el("button", {
+      class: "choice", type: "button",
+      onclick: function () { startSolo(); }
+    }, [
+      txt("span", "cd", "▢"),
+      el("span", {}, [
+        txt("span", "ct", "One phone, between us"),
+        txt("span", "cs", "This phone sits by the board and both of you tap into it.")
+      ])
+    ]));
+
+    picks.appendChild(el("button", {
+      class: "choice", type: "button",
+      onclick: function () { L.screen = "pairHost"; L.mode = "host"; render(); }
+    }, [
+      txt("span", "cd", "▣"),
+      el("span", {}, [
+        txt("span", "ct", "Two phones — start a match"),
+        txt("span", "cs", "You get a four-letter code. The other player types it on their phone and you are linked.")
+      ])
+    ]));
+
+    picks.appendChild(el("button", {
+      class: "choice", type: "button",
+      onclick: function () { L.screen = "pairGuest"; L.mode = "guest"; render(); }
+    }, [
+      txt("span", "cd", "→"),
+      el("span", {}, [
+        txt("span", "ct", "Two phones — join with a code"),
+        txt("span", "cs", "The other player already started and gave you four letters.")
+      ])
+    ]));
+
+    wrap.appendChild(picks);
+
+    if (saved) {
+      wrap.appendChild(el("button", {
+        class: "btn ghost", type: "button", style: "margin-top:12px;width:100%",
+        text: "RESUME · " + (saved.session || "last match"),
+        onclick: function () {
+          M = saved; L.mode = "solo"; L.mySide = null; L.screen = "match";
+          L.terrainMode = false; render();
+        }
+      }));
+    }
+
+    if (db === null) {
+      wrap.appendChild(txt("div", "note", "Two-phone play needs both players signed in to the same Claude workspace, on a link shared from this page."));
+    }
+
+    return wrap;
+  }
+
+  function startSolo() {
+    M = freshMatch();
+    M.session = L.session;
+    M.white = { id: "local-w", name: "White" };
+    M.black = { id: "local-b", name: "Black" };
+    M.startedAt = Date.now();
+    L.mode = "solo"; L.mySide = null; L.code = "";
+    L.screen = "match"; L.terrainMode = true;
+    saveSolo(); render();
+  }
+
+  function screenPairHost() {
+    var wrap = el("div", { class: "sheetpage scroll" });
+    wrap.appendChild(txt("div", "label", "TWO PHONES · START"));
+    wrap.appendChild(el("h1", { class: "title", text: "Start a match", style: "font-size:clamp(30px,9vw,38px)" }));
+    wrap.appendChild(txt("p", "lede", "Pick your side and your name. The code appears next — the other player types it into their phone."));
+
+    var nameIn = el("input", {
+      class: "field", id: "f-host-name", type: "text", value: L.myName, placeholder: "your name",
+      oninput: function (e) { L.myName = e.target.value; }
+    });
+    wrap.appendChild(el("div", { class: "stack", style: "gap:7px;margin-top:20px" }, [
+      el("label", { class: "label", for: "f-host-name", text: "YOU ARE" }), nameIn
+    ]));
+
+    wrap.appendChild(txt("div", "label", "YOUR SIDE"));
+    var sp = el("div", { class: "sidepick", style: "margin-top:8px" });
+    [["w", "WHITE"], ["b", "BLACK"]].forEach(function (pair) {
+      sp.appendChild(el("button", {
+        type: "button", "aria-pressed": L.pickSide === pair[0] ? "true" : "false",
+        onclick: function () { L.pickSide = pair[0]; render(); }
+      }, [
+        el("span", { class: "g", style: "color:" + (pair[0] === "w" ? "#F4EDDC" : "#12202B") + ";text-shadow:" + (pair[0] === "w" ? "0 1px 3px rgba(0,0,0,.7)" : "0 1px 2px rgba(240,232,212,.4)"), text: GLYPH.k }),
+        txt("span", "n", pair[1])
+      ]));
+    });
+    wrap.appendChild(sp);
+
+    if (!db) {
+      wrap.appendChild(txt("div", "warn", "Live matches are not available on this device right now. Both players need to be signed in to the same Claude workspace and opening this same link. You can still play with one phone."));
+    }
+    if (L.dbErr) wrap.appendChild(txt("div", "warn", L.dbErr));
+
+    wrap.appendChild(el("button", {
+      class: "btn", type: "button", style: "margin-top:22px;width:100%",
+      disabled: !db || L.busy,
+      text: L.busy ? "CREATING…" : "CREATE THE MATCH",
+      onclick: createMatch
+    }));
+    wrap.appendChild(el("button", {
+      class: "btn ghost", type: "button", style: "margin-top:10px;width:100%",
+      text: "BACK", onclick: function () { L.screen = "start"; L.mode = "solo"; render(); }
+    }));
+    return wrap;
+  }
+
+  function createMatch() {
+    if (!db || L.busy) return;
+    L.busy = true; L.dbErr = ""; render();
+
+    var code = newCode();
+    var ref = db.doc("matches/" + code);
+    ref.get().then(function (snap) {
+      if (snap.exists) { code = newCode(); ref = db.doc("matches/" + code); }
+      var m = freshMatch();
+      m.session = L.session;
+      m.startedAt = Date.now();
+      var seat = { id: myId || deviceId(), name: (L.myName || "").trim() || (L.pickSide === "w" ? "White" : "Black") };
+      if (L.pickSide === "w") m.white = seat; else m.black = seat;
+      return ref.set(m).then(function () {
+        M = m;
+        L.code = code; L.mySide = L.pickSide; L.mode = "host";
+        L.screen = "waiting"; L.busy = false;
+        watchMatch(code);
+        render();
+      });
+    }).catch(function (e) {
+      L.busy = false;
+      L.dbErr = e && e.code === "quota_exceeded"
+        ? "The match store is full. Delete some old matches first."
+        : "Could not start a live match on this device.";
+      render();
+    });
+  }
+
+  function screenPairGuest() {
+    var wrap = el("div", { class: "sheetpage scroll" });
+    wrap.appendChild(txt("div", "label", "TWO PHONES · JOIN"));
+    wrap.appendChild(el("h1", { class: "title", text: "Join a match", style: "font-size:clamp(30px,9vw,38px)" }));
+    wrap.appendChild(txt("p", "lede", "Type the four letters showing on the other phone."));
+
+    var codeIn = el("input", {
+      class: "codeinput", id: "f-code", type: "text", value: L.codeDraft,
+      maxlength: "4", autocapitalize: "characters", autocomplete: "off", spellcheck: "false",
+      "aria-label": "Match code",
+      oninput: function (e) {
+        L.codeDraft = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 4);
+        e.target.value = L.codeDraft;
+      }
+    });
+    wrap.appendChild(el("div", { style: "margin-top:20px" }, [codeIn]));
+
+    var nameIn = el("input", {
+      class: "field", id: "f-guest-name", type: "text", value: L.myName, placeholder: "your name",
+      oninput: function (e) { L.myName = e.target.value; }
+    });
+    wrap.appendChild(el("div", { class: "stack", style: "gap:7px;margin-top:16px" }, [
+      el("label", { class: "label", for: "f-guest-name", text: "YOU ARE" }), nameIn
+    ]));
+
+    if (!db) wrap.appendChild(txt("div", "warn", "Live matches are not available on this device right now. Both players need to be signed in to the same Claude workspace and opening this same link."));
+    if (L.dbErr) wrap.appendChild(txt("div", "warn", L.dbErr));
+
+    wrap.appendChild(el("button", {
+      class: "btn", type: "button", style: "margin-top:20px;width:100%",
+      disabled: !db || L.codeDraft.length !== 4 || L.busy,
+      text: L.busy ? "JOINING…" : "JOIN",
+      onclick: joinMatch
+    }));
+    wrap.appendChild(el("button", {
+      class: "btn ghost", type: "button", style: "margin-top:10px;width:100%",
+      text: "BACK", onclick: function () { L.screen = "start"; L.mode = "solo"; render(); }
+    }));
+    return wrap;
+  }
+
+  function joinMatch() {
+    if (!db || L.busy) return;
+    L.busy = true; L.dbErr = ""; render();
+
+    var code = L.codeDraft;
+    var ref = db.doc("matches/" + code);
+    var me = myId || deviceId();
+
+    ref.acquire({ holder: me, ttlMs: 6000 }).then(function (res) {
+      if (!res.acquired) {
+        L.busy = false;
+        L.dbErr = "Someone else is joining right now. Try again in a moment.";
+        return render();
+      }
+      return ref.get().then(function (snap) {
+        if (!snap.exists) {
+          L.busy = false;
+          L.dbErr = "No match with that code. Check the letters on the other phone.";
+          return render();
+        }
+        var m = snap.data();
+        var seat = { id: me, name: (L.myName || "").trim() || "Player" };
+        var side;
+        if (!m.white) side = "w";
+        else if (!m.black) side = "b";
+        else if (m.white.id === me) side = "w";
+        else if (m.black.id === me) side = "b";
+        else {
+          L.busy = false;
+          L.dbErr = "That match already has two players.";
+          return render();
+        }
+        var patch = {};
+        patch[side === "w" ? "white" : "black"] = seat;
+        return ref.update(patch).then(function () {
+          M = m;
+          if (side === "w") M.white = seat; else M.black = seat;
+          L.code = code; L.mySide = side; L.mode = "guest";
+          L.screen = "match"; L.busy = false; L.terrainMode = false;
+          watchMatch(code);
+          render();
+        });
+      });
+    }).catch(function (e) {
+      L.busy = false;
+      L.dbErr = e && e.code === "invalid_argument"
+        ? "That code is not valid."
+        : "Could not join. Check that both phones are on the same link.";
+      render();
+    });
+  }
+
+  function screenWaiting() {
+    var wrap = el("div", { class: "sheetpage scroll" });
+    wrap.appendChild(txt("div", "label", "WAITING FOR THE OTHER PHONE"));
+    wrap.appendChild(el("h1", { class: "title", text: "Your code", style: "font-size:clamp(30px,9vw,38px)" }));
+
+    var box = el("div", { class: "codebox" });
+    box.appendChild(txt("div", "code", L.code));
+    box.appendChild(txt("div", "label", "FOUR LETTERS, ON THE OTHER PHONE"));
+    wrap.appendChild(box);
+
+    wrap.appendChild(txt("p", "lede", "They open this same link, choose “Join with a code” and type those four letters. The match starts the moment they do."));
+
+    wrap.appendChild(el("button", {
+      class: "btn outline", type: "button", style: "margin-top:20px;width:100%",
+      text: L.copied === "yes" ? "COPIED" : "COPY THE CODE",
+      onclick: function () { doCopy(L.code); }
+    }));
+    wrap.appendChild(el("button", {
+      class: "btn ghost", type: "button", style: "margin-top:10px;width:100%",
+      text: "START WITHOUT THEM · ONE PHONE",
+      onclick: function () { L.screen = "match"; L.terrainMode = true; render(); }
+    }));
+
+    if (L.dbErr) wrap.appendChild(txt("div", "warn", L.dbErr));
+    return wrap;
+  }
+
+  // ───────────────────────── match screen ─────────────────────────
+  function bandContent() {
+    var title = "", sub = "", meta = "", hot = false, showOv = false;
+    var lm = lastMove();
+
+    if (L.terrainMode) {
+      title = "Mark the terrain";
+      sub = "Pick a type, then tap the squares it covers.";
+      meta = Object.keys(M.terrain).length + " SET";
+      hot = true;
+    } else if (M.phase === "resolve" && lm) {
+      title = cap(lm.piece) + " " + lm.from + " → " + lm.to;
+      var bits = [];
+      if (lm.captured) bits.push("Took a " + lm.captured + ".");
+      if (lm.terrainTo) bits.push("Landed on " + (TBY[lm.terrainTo] ? TBY[lm.terrainTo].name.toLowerCase() : lm.terrainTo) + ".");
+      if (!bits.length) bits.push("Quiet square.");
+      sub = bits.join(" ");
+      meta = "MOVE " + lm.no;
+      hot = true;
+    } else {
+      title = sideName(M.turn) + " to move";
+      meta = "MOVE " + M.moveNo;
+      if (L.sel !== null && M.board[L.sel]) {
+        title = cap(PNAME[M.board[L.sel].t]) + " on " + sqName(L.sel);
+        sub = L.override ? "Rule off — tap any square." : "Tap where it went.";
+        showOv = true;
+      } else if (!myTurn()) {
+        sub = "Waiting for the other phone.";
+      } else {
+        sub = "Move the piece on the board, then tap it here.";
+      }
+    }
+    if (L.nudge) sub = L.nudge;
+    return { title: title, sub: sub, meta: meta, hot: hot, showOv: showOv };
+  }
+
+  function screenMatch() {
+    var frag = document.createDocumentFragment();
+
+    // top bar
+    var bar = el("div", { class: "bar" });
+    bar.appendChild(el("span", { class: "eyebrow", text: "SAHSAH" }));
+    bar.appendChild(el("span", { class: "sess", text: M.session + (L.code ? " · " + L.code : "") }));
+    if (L.mode !== "solo") {
+      var st = el("span", { class: "link", style: "color:" + (L.linked ? "#A8CE8C" : "#8FA3B0") });
+      st.appendChild(el("span", { class: "dot" + (L.linked ? " on" : "") }));
+      st.appendChild(document.createTextNode(L.linked ? "LINKED" : "ALONE"));
+      bar.appendChild(st);
+    }
+    clockEl = el("span", { class: "mono tnum", style: "font-size:12px;color:var(--mist)", text: clockText() });
+    bar.appendChild(clockEl);
+    frag.appendChild(bar);
+
+    // band
+    var b = bandContent();
+    var band = el("div", { class: "band" + (b.hot ? " hot" : "") });
+    var r1 = el("div", { class: "row1" });
+    r1.appendChild(el("span", {
+      class: "turn",
+      style: "background:" + (M.turn === "w" ? "#F4EDDC" : "#12202B") + ";border-color:" + (M.turn === "w" ? "#F4EDDC" : "#8FA3B0")
+    }));
+    r1.appendChild(el("h2", { text: b.title }));
+    r1.appendChild(el("span", { class: "meta", text: b.meta }));
+    band.appendChild(r1);
+
+    var r2 = el("div", { class: "row2" });
+    r2.appendChild(el("span", { class: "sub" + (L.nudge ? " nudge" : ""), text: b.sub }));
+    if (b.showOv) {
+      r2.appendChild(el("button", {
+        class: "chip" + (L.override ? " on" : ""), type: "button",
+        text: L.override ? "RULE OFF" : "BREAK THE RULE",
+        onclick: function () { L.override = !L.override; L.nudge = ""; render(); }
+      }));
+    }
+    if (L.terrainMode) {
+      r2.appendChild(el("button", {
+        class: "chip brass", type: "button",
+        text: Object.keys(M.terrain).length ? "DONE" : "SKIP",
+        onclick: function () { L.terrainMode = false; L.sel = null; L.nudge = ""; render(); }
+      }));
+    }
+    band.appendChild(r2);
+    frag.appendChild(band);
+
+    if (L.dbErr) {
+      frag.appendChild(el("div", { class: "warn", style: "margin:10px 16px 0", text: L.dbErr }));
+    }
+
+    // terrain palette
+    if (L.terrainMode) {
+      var tp = el("div", { class: "terrpick" });
+      TERRAIN.forEach(function (t) {
+        var on = L.terrainPick === t.id;
+        tp.appendChild(el("button", {
+          type: "button", "aria-label": t.name, "aria-pressed": on ? "true" : "false",
+          style: "background:" + (on ? t.color : "var(--field)") + ";border-color:" + (on ? t.color : "var(--line)"),
+          onclick: function () { L.terrainPick = t.id; render(); }
+        }, [
+          el("span", { class: "m", style: "color:" + (on ? "#0F1C27" : t.color), text: t.mark }),
+          el("span", { class: "n", style: "color:" + (on ? "#0F1C27" : t.color), text: t.short })
+        ]));
+      });
+      frag.appendChild(tp);
+    }
+
+    // board
+    frag.appendChild(boardBlock());
+
+    // legend
+    var lg = el("div", { class: "legend" });
+    TERRAIN.slice(0, 4).forEach(function (t) {
+      lg.appendChild(el("div", { style: "background:" + t.tint }, [
+        el("span", { class: "m", style: "color:" + t.color, text: t.mark }),
+        el("span", { class: "n", text: t.name })
+      ]));
+    });
+    frag.appendChild(lg);
+
+    // cards in play
+    var rail = el("div", { class: "rail" });
+    rail.appendChild(el("span", { class: "k", text: "IN PLAY" }));
+    var strip = el("div", { class: "strip scroll" });
+    if (!M.cards.length) strip.appendChild(el("span", { class: "empty", text: "no cards in play" }));
+    M.cards.forEach(function (c) {
+      strip.appendChild(el("button", {
+        class: "card", type: "button",
+        "aria-label": c.name + ", " + c.left + " turns left, tap to adjust",
+        onclick: function () { L.modal = "card-edit"; L.editCardId = c.id; render(); }
+      }, [
+        el("span", { class: "cn", text: c.name }),
+        el("span", { class: "cl", text: c.left + "↓" })
+      ]));
+    });
+    rail.appendChild(strip);
+    frag.appendChild(rail);
+
+    // pane
+    frag.appendChild(M.phase === "resolve" && !L.terrainMode ? resolvePane() : logPane());
+
+    // dock
+    var dock = el("div", { class: "dock" });
+    dock.appendChild(el("button", {
+      type: "button", text: "Undo", disabled: !M.log.length || (L.mode !== "solo" && !myTurn() && M.phase === "move"),
+      onclick: undoLast
+    }));
+    dock.appendChild(el("button", { type: "button", text: "Cards", onclick: function () { L.modal = "cards"; render(); } }));
+    dock.appendChild(el("button", { type: "button", text: "More", onclick: function () { L.modal = "menu"; render(); } }));
+    frag.appendChild(dock);
+
+    return frag;
+  }
+
+  function boardBlock() {
+    var wrap = el("div", { class: "boardwrap" });
+    var flip = flipped();
+
+    var ranks = el("div", { class: "ranks" });
+    for (var q = 0; q < 8; q++) ranks.appendChild(el("div", { text: String(flip ? q + 1 : 8 - q) }));
+    wrap.appendChild(ranks);
+
+    var col = el("div", { class: "boardcol" });
+    var grid = el("div", { class: "board" });
+
+    var reachable = {};
+    if (L.hints && L.sel !== null && !L.terrainMode && M.phase === "move" && !L.override) {
+      reachable = reach(M.board, L.sel);
+    }
+
+    for (var n = 0; n < 64; n++) {
+      var idx = flip ? 63 - n : n;
+      grid.appendChild(square(idx, reachable));
+    }
+    col.appendChild(grid);
+
+    var files = el("div", { class: "files" });
+    for (var f = 0; f < 8; f++) files.appendChild(el("div", { text: "abcdefgh".charAt(flip ? 7 - f : f) }));
+    col.appendChild(files);
+
+    wrap.appendChild(col);
+    return wrap;
+  }
+
+  function square(idx, reachable) {
+    var r = Math.floor(idx / 8), f = idx % 8;
+    var light = (r + f) % 2 === 0;
+    var p = M.board[idx], terr = M.terrain[idx];
+    var hot = M.lastMove && (M.lastMove.from === idx || M.lastMove.to === idx);
+
+    var cls = "sq" + (light ? " lt" : "") + (hot ? " hot" : "") + (L.sel === idx ? " sel" : "");
+    var aria = sqName(idx);
+    if (p) aria = (p.c === "w" ? "white " : "black ") + PNAME[p.t] + " on " + aria;
+    if (terr && TBY[terr]) aria += ", " + TBY[terr].name.toLowerCase();
+
+    var kids = [];
+    if (terr && TBY[terr]) {
+      kids.push(el("span", { class: "tint", style: "background:" + TBY[terr].tint }));
+      kids.push(el("span", { class: "tmark", style: "color:" + TBY[terr].color, text: TBY[terr].mark }));
+    }
+    if (p) {
+      var dim = !L.terrainMode && M.phase === "move" && p.c !== M.turn;
+      kids.push(el("span", { class: "pc " + p.c + (dim ? " dim" : ""), text: GLYPH[p.t] }));
+    }
+    if (reachable[idx]) kids.push(el("span", { class: "hint" }));
+
+    return el("button", {
+      class: cls, type: "button", "aria-label": aria,
+      onclick: function () { tapSquare(idx); }
+    }, kids);
+  }
+
+  function logPane() {
+    var pane = el("div", { class: "pane scroll" });
+    if (!M.log.length) {
+      pane.appendChild(el("div", { class: "hint", text: "Nothing played yet. Every move you enter will be listed here, newest first." }));
+      return pane;
+    }
+    for (var i = M.log.length - 1; i >= 0; i--) {
+      var m = M.log[i], isLast = i === M.log.length - 1;
+      var row = el("div", { class: "move" + (isLast ? " last" : "") });
+      row.appendChild(el("span", { class: "n", text: m.no + (m.side === "w" ? "." : "…") }));
+      row.appendChild(el("span", { class: "s", text: m.san }));
+      var tags = el("div", { class: "tags" });
+      m.tags.forEach(function (t) {
+        var c = "plain";
+        if (t === "MINE" || t === "REFUSED") c = "mine";
+        else if (t === "CARD" || t === "OVERRIDE") c = "card";
+        else if (t === "TERRAIN") c = "terr";
+        tags.appendChild(el("span", { class: "tag " + c, text: t }));
+      });
+      if (m.note) tags.appendChild(el("span", { class: "note", text: m.note }));
+      row.appendChild(tags);
+      pane.appendChild(row);
+    }
+    return pane;
+  }
+
+  function resolvePane() {
+    var pane = el("div", { class: "pane resolve scroll" });
+    var lm = lastMove();
+    var mine = L.mode === "solo" || (lm && lm.by === L.mySide);
+
+    if (!mine) {
+      pane.appendChild(el("div", { class: "hint", text: sideName(lm ? lm.side : M.turn) + " is saying what happened. The turn comes to you next." }));
+      return pane;
+    }
+
+    pane.appendChild(el("div", { class: "label", text: "WHAT HAPPENED?" }));
+    var grid = el("div", { class: "flags" });
+    RESOLVE.forEach(function (rr) {
+      var on = lm && lm.tags.indexOf(rr.tag) >= 0;
+      grid.appendChild(el("button", {
+        type: "button", class: rr.cls, "aria-pressed": on ? "true" : "false",
+        text: rr.label, onclick: function () { toggleTag(rr.tag); }
+      }));
+    });
+    grid.appendChild(el("button", {
+      type: "button", "aria-pressed": L.noteOpen ? "true" : "false", text: "Note…",
+      onclick: function () { L.noteOpen = !L.noteOpen; render(); }
+    }));
+    pane.appendChild(grid);
+
+    if (L.noteOpen) {
+      var ni = el("input", {
+        class: "field", id: "f-note", type: "text", placeholder: "in your own words",
+        value: lm ? lm.note : "", style: "margin-top:8px",
+        oninput: function (e) { setNote(e.target.value); }
+      });
+      pane.appendChild(ni);
+    }
+
+    var flagged = lm ? lm.tags.filter(function (t) { return t !== "CAPTURE" && t !== "OVERRIDE"; }).length : 0;
+    pane.appendChild(el("button", {
+      class: "btn", type: "button", style: "margin-top:10px;width:100%",
+      text: (flagged || (lm && lm.note)) ? "DONE — END THE TURN" : "NOTHING HAPPENED — END THE TURN",
+      onclick: endTurn
+    }));
+    return pane;
+  }
+
+  // ───────────────────────── summary ─────────────────────────
+  function screenSummary() {
+    var frag = document.createDocumentFragment();
+
+    var head = el("div", { style: "flex:0 0 auto;padding:26px 16px 14px;border-bottom:1px solid #1B2D3B" });
+    head.appendChild(el("div", { class: "eyebrow", text: "PLAYTEST LOG" }));
+    head.appendChild(el("h2", { style: "margin:9px 0 0;font-size:30px;font-weight:500;line-height:1.05", text: M.session }));
+    var flagged = 0;
+    M.log.forEach(function (m) { if (m.tags.length || m.note) flagged++; });
+    var stats = el("div", { class: "stats" });
+    [["MOVES", String(M.log.length), "var(--parchment)"], ["LENGTH", clockText(), "var(--parchment)"], ["FLAGGED", String(flagged), "var(--brass)"]].forEach(function (s) {
+      stats.appendChild(el("div", {}, [
+        el("div", { class: "k", text: s[0] }),
+        el("div", { class: "v", style: "color:" + s[2], text: s[1] })
+      ]));
+    });
+    head.appendChild(stats);
+    frag.appendChild(head);
+
+    var segs = el("div", { class: "segs", style: "flex:0 0 auto;padding:11px 16px;border-bottom:1px solid #1B2D3B" });
+    [["text", "READABLE"], ["json", "JSON"]].forEach(function (s) {
+      segs.appendChild(el("button", {
+        type: "button", "aria-pressed": L.exportFmt === s[0] ? "true" : "false", text: s[1],
+        onclick: function () { L.exportFmt = s[0]; L.copied = ""; render(); }
+      }));
+    });
+    frag.appendChild(segs);
+
+    var body = el("div", { class: "scroll", style: "flex:1;min-height:0;padding:14px 16px;background:#081016" });
+    body.appendChild(el("pre", { class: "out", text: exportText() }));
+    frag.appendChild(body);
+
+    var foot = el("div", { style: "flex:0 0 auto;padding:13px 16px;padding-bottom:calc(22px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line);display:flex;flex-direction:column;gap:8px" });
+    foot.appendChild(el("button", {
+      class: "btn", type: "button",
+      text: L.copied === "yes" ? "COPIED" : (L.copied === "manual" ? "SELECT THE TEXT ABOVE" : "COPY THE LOG"),
+      onclick: function () { doCopy(exportText()); }
+    }));
+    var pair = el("div", { style: "display:flex;gap:8px" });
+    pair.appendChild(el("button", { class: "btn ghost", type: "button", style: "flex:1", text: "BACK", onclick: function () { L.screen = "match"; render(); } }));
+    pair.appendChild(el("button", { class: "btn ghost", type: "button", style: "flex:1", text: "NEW MATCH", onclick: function () { L.screen = "start"; L.mode = "solo"; L.mySide = null; L.code = ""; render(); } }));
+    foot.appendChild(pair);
+    frag.appendChild(foot);
+
+    return frag;
+  }
+
+  // ───────────────────────── modals ─────────────────────────
+  function modalCards() {
+    var box = el("div", { class: "modal scroll" });
+    box.appendChild(el("div", { class: "eyebrow", text: "PLAY A CARD" }));
+    box.appendChild(el("p", { style: "margin:8px 0 0;font-size:16px;color:var(--mist);font-style:italic;line-height:1.4", text: "Tap one and it goes in play for " + L.cardDur + (L.cardDur === 1 ? " turn" : " turns") + ", counting down a step each move." }));
+
+    var shelf = el("div", { class: "shelf" });
+    L.shelf.forEach(function (name) {
+      shelf.appendChild(el("button", { type: "button", onclick: function () { playCard(name); } }, [
+        el("span", { class: "pip", text: "◆" }),
+        el("span", { class: "nm", text: name })
+      ]));
+    });
+    box.appendChild(shelf);
+
+    box.appendChild(el("div", { class: "label", style: "margin-top:15px", text: "HOW LONG" }));
+    var st = el("div", { class: "stepper" });
+    st.appendChild(el("button", { type: "button", "aria-label": "Fewer turns", text: "−", onclick: function () { L.cardDur = Math.max(1, L.cardDur - 1); render(); } }));
+    st.appendChild(el("div", { class: "v", text: L.cardDur + (L.cardDur === 1 ? " turn" : " turns") }));
+    st.appendChild(el("button", { type: "button", "aria-label": "More turns", text: "+", onclick: function () { L.cardDur = Math.min(20, L.cardDur + 1); render(); } }));
+    box.appendChild(st);
+
+    var row = el("div", { style: "display:flex;gap:8px;margin-top:15px" });
+    var inp = el("input", {
+      class: "field", id: "f-card", type: "text", placeholder: "something not on the shelf", value: L.cardDraft,
+      style: "flex:1;min-width:0", oninput: function (e) { L.cardDraft = e.target.value; }
+    });
+    row.appendChild(inp);
+    row.appendChild(el("button", {
+      class: "btn outline", type: "button", style: "flex:0 0 auto;width:78px;height:52px;font-size:9.5px;letter-spacing:1.2px",
+      text: "PLAY", onclick: function () { playCard(L.cardDraft); }
+    }));
+    box.appendChild(row);
+
+    box.appendChild(el("button", {
+      class: "btn ghost", type: "button", style: "margin-top:10px;width:100%",
+      text: "ADD IT TO THE SHELF TOO",
+      onclick: function () {
+        var v = (L.cardDraft || "").trim();
+        if (!v) return;
+        if (L.shelf.indexOf(v) < 0) L.shelf = L.shelf.concat([v]);
+        render();
+      }
+    }));
+    return box;
+  }
+
+  function modalCardEdit() {
+    var c = null;
+    M.cards.forEach(function (x) { if (x.id === L.editCardId) c = x; });
+    var box = el("div", { class: "modal scroll" });
+    if (!c) { box.appendChild(el("div", { class: "eyebrow", text: "GONE" })); return box; }
+
+    box.appendChild(el("div", { class: "eyebrow", text: c.name }));
+    box.appendChild(el("p", { style: "margin:8px 0 0;font-size:16px;color:var(--mist);font-style:italic", text: "In play since move " + c.fromMove + "." }));
+
+    var st = el("div", { class: "stepper" });
+    st.appendChild(el("button", {
+      type: "button", "aria-label": "Fewer turns", text: "−",
+      onclick: function () { c.left = Math.max(1, c.left - 1); pushMatch(); }
+    }));
+    st.appendChild(el("div", { class: "v", text: c.left + (c.left === 1 ? " turn" : " turns") }));
+    st.appendChild(el("button", {
+      type: "button", "aria-label": "More turns", text: "+",
+      onclick: function () { c.left = Math.min(20, c.left + 1); pushMatch(); }
+    }));
+    box.appendChild(st);
+
+    box.appendChild(el("button", {
+      class: "btn", type: "button",
+      style: "margin-top:15px;width:100%;background:transparent;border:1px solid var(--rust);color:var(--rust-text)",
+      text: "TAKE IT OUT OF PLAY",
+      onclick: function () {
+        M.cards = M.cards.filter(function (x) { return x.id !== L.editCardId; });
+        L.modal = null; pushMatch();
+      }
+    }));
+    return box;
+  }
+
+  function modalMenu() {
+    var box = el("div", { class: "modal scroll menu" });
+    box.appendChild(el("div", { class: "eyebrow", text: "MATCH" }));
+
+    box.appendChild(el("button", {
+      type: "button", onclick: function () { L.terrainMode = true; L.modal = null; L.sel = null; render(); }
+    }, [
+      el("span", { class: "ic", text: "▲" }),
+      el("span", { style: "flex:1;min-width:0" }, [
+        txt("span", "mt", "Mark the terrain"),
+        txt("span", "ms", "Copy your printed map onto the grid")
+      ])
+    ]));
+
+    var tg = el("span", { class: "toggle" + (L.hints ? " on" : "") });
+    tg.appendChild(el("i"));
+    box.appendChild(el("button", {
+      type: "button", onclick: function () { L.hints = !L.hints; render(); }
+    }, [
+      tg,
+      el("span", { style: "flex:1;min-width:0" }, [
+        txt("span", "mt", "Show where a piece can go"),
+        txt("span", "ms", "Dots on the squares it may reach")
+      ])
+    ]));
+
+    box.appendChild(el("button", {
+      type: "button", onclick: function () {
+        M.turn = M.turn === "w" ? "b" : "w";
+        M.phase = "move"; L.modal = null; L.sel = null; L.nudge = "";
+        pushMatch();
+      }
+    }, [
+      el("span", { class: "ic", style: "color:var(--mist)", text: "⇅" }),
+      el("span", { style: "flex:1;min-width:0" }, [
+        txt("span", "mt", "Hand the turn over"),
+        txt("span", "ms", "Skip a side without logging a move")
+      ])
+    ]));
+
+    box.appendChild(el("button", {
+      class: "btn outline", type: "button", style: "margin-top:16px;width:100%",
+      text: "END & READ THE LOG",
+      onclick: function () { L.screen = "summary"; L.modal = null; render(); }
+    }));
+    return box;
+  }
+
+  function modalPromo() {
+    var box = el("div", { class: "modal scroll" });
+    box.appendChild(el("div", { class: "eyebrow", text: "THE PAWN REACHED THE END" }));
+    box.appendChild(el("p", { style: "margin:8px 0 0;font-size:16px;color:var(--mist);font-style:italic", text: "What did it become?" }));
+
+    var grid = el("div", { style: "display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;margin-top:15px" });
+    ["q", "r", "b", "n", "p"].forEach(function (t) {
+      grid.appendChild(el("button", {
+        type: "button",
+        "aria-label": t === "p" ? "stays a pawn" : "becomes a " + PNAME[t],
+        style: "min-height:72px;border:1px solid var(--line);border-radius:3px;background:#0B1620;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px",
+        onclick: function () {
+          var pp = L.pendingPromo;
+          if (!pp) { L.modal = null; return render(); }
+          applyMove(pp.from, pp.to, t === "p" ? null : t);
+        }
+      }, [
+        el("span", {
+          style: "font-size:25px;line-height:1;color:" + (M.turn === "w" ? "#F4EDDC" : "#12202B") + ";text-shadow:" + (M.turn === "w" ? "0 1px 3px rgba(0,0,0,.7)" : "0 1px 2px rgba(240,232,212,.4)"),
+          text: GLYPH[t]
+        }),
+        el("span", { class: "mono", style: "font-size:7.5px;letter-spacing:.7px;color:var(--slate)", text: t === "p" ? "STAYS" : PNAME[t].toUpperCase().slice(0, 6) })
+      ]));
+    });
+    box.appendChild(grid);
+    return box;
+  }
+
+  // ───────────────────────── render ─────────────────────────
+  var app = document.getElementById("app");
+  var veil = null;
+  var clockEl = null;
+
+  function render() {
+    clockEl = null;
+    var active = document.activeElement;
+    var activeId = active && active.id ? active.id : null;
+    var caret = (active && typeof active.selectionStart === "number") ? active.selectionStart : null;
+
+    app.textContent = "";
+    if (L.screen === "start") app.appendChild(screenStart());
+    else if (L.screen === "pairHost") app.appendChild(screenPairHost());
+    else if (L.screen === "pairGuest") app.appendChild(screenPairGuest());
+    else if (L.screen === "waiting") app.appendChild(screenWaiting());
+    else if (L.screen === "summary") app.appendChild(screenSummary());
+    else app.appendChild(screenMatch());
+
+    if (veil) { veil.remove(); veil = null; }
+    if (L.modal) {
+      veil = el("div", { class: "veil" });
+      veil.appendChild(el("button", {
+        class: "tap", type: "button", "aria-label": "Close",
+        onclick: function () { L.modal = null; L.pendingPromo = null; render(); }
+      }));
+      var body = L.modal === "cards" ? modalCards()
+        : L.modal === "menu" ? modalMenu()
+          : L.modal === "promo" ? modalPromo()
+            : modalCardEdit();
+      veil.appendChild(body);
+      document.body.appendChild(veil);
+    }
+
+    if (activeId) {
+      var again = document.getElementById(activeId);
+      if (again && again !== document.activeElement) {
+        again.focus();
+        if (caret != null && typeof again.setSelectionRange === "function") {
+          try { again.setSelectionRange(caret, caret); } catch (e) { }
+        }
+      }
+    }
+  }
+
+  // The clock ticks on its own node — a full re-render every second would
+  // fight anyone typing and rebuild the board 60 times a minute.
+  setInterval(function () {
+    L.now = Date.now();
+    if (clockEl) clockEl.textContent = clockText();
+  }, 1000);
+
+  bootCapabilities();
+  render();
+})();
+</script>
