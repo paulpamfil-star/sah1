@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Console anatomy and the table loop</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap">
+<style>
+body { margin: 0; background: #0A1219; }
+</style>
+</helmet>
+
+<div style="width: 1000px; height: 844px; box-sizing: border-box; padding: 44px 48px; background: #0A1219; color: #EDE4D0; font-family: 'EB Garamond', Georgia, serif; display: flex; flex-direction: column; gap: 26px">
+
+  <!-- header -->
+  <div style="flex-shrink: 0">
+    <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 3px; color: {{accent}}; font-weight: 700">SAHSAH &middot; PLAYTEST CONSOLE</div>
+    <h1 style="margin: 12px 0 0 0; font-size: 42px; font-weight: 500; line-height: 1">What every control does</h1>
+    <p style="margin: 9px 0 0 0; font-size: 18px; color: #A9BAC6; font-style: italic; max-width: 620px">The phone does not run the game. It keeps the record, so a playtest leaves something behind you can read afterwards.</p>
+  </div>
+
+  <!-- body -->
+  <div style="flex-grow: 1; min-height: 0; display: flex; gap: 44px">
+
+    <!-- phone mock -->
+    <div style="flex-shrink: 0; position: relative; width: 296px">
+      <div style="width: 296px; height: 560px; box-sizing: border-box; border: 1px solid #2E4A5E; border-radius: 16px; background: #0A1219; overflow: hidden; display: flex; flex-direction: column">
+
+        <div style="height: 34px; flex-shrink: 0; padding: 0 12px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #1B2D3B">
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 2.2px; color: {{accent}}; font-weight: 700">SAHSAH</span>
+          <span style="flex-grow: 1; font-family: 'JetBrains Mono', monospace; font-size: 8px; color: #8FA3B0">Playtest 01</span>
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #C7D6E0">12:04</span>
+        </div>
+
+        <div style="flex-shrink: 0; padding: 9px 12px; display: flex; align-items: flex-end; border-bottom: 1px solid #1B2D3B">
+          <div style="flex-grow: 1">
+            <div style="font-size: 19px; line-height: 1.05">White to move</div>
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 1.4px; color: #8FA3B0; margin-top: 3px">ANCA</div>
+          </div>
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 1.4px; color: #8FA3B0">MOVE 7</div>
+        </div>
+
+        <div style="flex-shrink: 0; padding: 10px 12px 6px 12px">
+          <div style="display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); width: 272px; border: 1px solid #3E5566">
+            <sc-for list="{{cells}}" as="c" hint-placeholder-count="64">
+              <div style="position: relative; height: 34px; display: flex; align-items: center; justify-content: center; background: {{c.bg}}; box-shadow: {{c.ring}}">
+                <sc-if value="{{c.hasTerrain}}" hint-placeholder-val="{{true}}">
+                  <span style="position: absolute; left: 2px; top: 1px; font-size: 9px; line-height: 1; color: {{c.tColor}}; text-shadow: 0 1px 2px rgba(0,0,0,0.75)">{{c.tMark}}</span>
+                </sc-if>
+                <sc-if value="{{c.hasPiece}}" hint-placeholder-val="{{true}}">
+                  <span style="font-size: 23px; line-height: 1; color: {{c.pColor}}; text-shadow: {{c.pShadow}}">{{c.glyph}}</span>
+                </sc-if>
+                <sc-if value="{{c.isHint}}" hint-placeholder-val="{{true}}">
+                  <span style="position: absolute; width: 8px; height: 8px; border-radius: 50%; background: rgba(12,20,28,0.5); border: 1.5px solid {{accent}}"></span>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="flex-shrink: 0; padding: 2px 12px 7px 12px; display: flex; align-items: center; gap: 6px">
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 7.5px; letter-spacing: 1.4px; color: #8FA3B0">ACTIVE</span>
+          <span style="height: 26px; padding: 0 7px; display: flex; align-items: center; gap: 6px; border: 1px solid {{accent}}; border-radius: 2px; background: #1B2A1C">
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 1.1px; color: {{accent}}; font-weight: 700">FOG OF WAR</span>
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 8px; color: #C7D6E0">2&darr;</span>
+          </span>
+        </div>
+
+        <div style="flex-grow: 1; min-height: 0; border-top: 1px solid #1B2D3B">
+          <div style="padding: 6px 12px; display: flex; align-items: baseline; gap: 8px; background: rgba(200,164,76,0.07); border-bottom: 1px solid #16242F">
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 8px; color: #8FA3B0; width: 20px">4&hellip;</span>
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #EDE4D0">Bf8&times;c5</span>
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 7.5px; letter-spacing: 1px; padding: 2px 4px; border-radius: 2px; color: #C7D6E0; background: rgba(90,120,142,0.22)">CAPTURE</span>
+          </div>
+          <div style="padding: 6px 12px; display: flex; align-items: baseline; gap: 8px; border-bottom: 1px solid #16242F">
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 8px; color: #8FA3B0; width: 20px">4.</span>
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #A9BAC6">d2&ndash;d4</span>
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 7.5px; letter-spacing: 1px; padding: 2px 4px; border-radius: 2px; color: #F0A183; background: rgba(184,84,51,0.22)">MINE</span>
+            <span style="font-size: 12px; color: #8FA3B0; font-style: italic">lost the pawn</span>
+          </div>
+          <div style="padding: 6px 12px; display: flex; align-items: baseline; gap: 8px; border-bottom: 1px solid #16242F">
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 8px; color: #8FA3B0; width: 20px">3&hellip;</span>
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #A9BAC6">Ng8&ndash;f6</span>
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 7.5px; letter-spacing: 1px; padding: 2px 4px; border-radius: 2px; color: #A8CE8C; background: rgba(110,130,87,0.24)">RIVER</span>
+          </div>
+        </div>
+
+        <div style="flex-shrink: 0; height: 40px; display: flex; border-top: 1px solid #23394A; background: #0D1A24">
+          <div style="flex-grow: 1; border-right: 1px solid #1B2D3B; display: flex; align-items: center; justify-content: center; color: #C7D6E0; font-size: 14px">Undo</div>
+          <div style="flex-grow: 1; border-right: 1px solid #1B2D3B; display: flex; align-items: center; justify-content: center; color: #C7D6E0; font-size: 14px">Cards</div>
+          <div style="flex-grow: 1; display: flex; align-items: center; justify-content: center; color: #C7D6E0; font-size: 14px">More</div>
+        </div>
+
+      </div>
+
+      <!-- callout badges -->
+      <sc-for list="{{badges}}" as="b" hint-placeholder-count="7">
+        <span style="position: absolute; left: {{b.x}}; top: {{b.y}}; width: 21px; height: 21px; border-radius: 50%; background: {{accent}}; color: #14202B; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center">{{b.n}}</span>
+      </sc-for>
+    </div>
+
+    <!-- legend -->
+    <div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 13px">
+
+      <div style="display: flex; gap: 13px">
+        <span style="flex-shrink: 0; width: 21px; height: 21px; border-radius: 50%; border: 1px solid {{accent}}; color: {{accent}}; font-family: 'JetBrains Mono', monospace; font-size: 10px; display: flex; align-items: center; justify-content: center">1</span>
+        <p style="margin: 0; font-size: 17px; line-height: 1.45; color: #C7D6E0"><span style="color: #EDE4D0">Match clock.</span> Starts when you tap Start match and never stops. It is the only timing the prototype keeps &mdash; no per-player chess clock yet.</p>
+      </div>
+
+      <div style="display: flex; gap: 13px">
+        <span style="flex-shrink: 0; width: 21px; height: 21px; border-radius: 50%; border: 1px solid {{accent}}; color: {{accent}}; font-family: 'JetBrains Mono', monospace; font-size: 10px; display: flex; align-items: center; justify-content: center">2</span>
+        <p style="margin: 0; font-size: 17px; line-height: 1.45; color: #C7D6E0"><span style="color: #EDE4D0">Whose turn, and the move number.</span> It flips itself after every move you log. More &rarr; Hand the turn over skips a side when a rule says someone loses their go.</p>
+      </div>
+
+      <div style="display: flex; gap: 13px">
+        <span style="flex-shrink: 0; width: 21px; height: 21px; border-radius: 50%; border: 1px solid {{accent}}; color: {{accent}}; font-family: 'JetBrains Mono', monospace; font-size: 10px; display: flex; align-items: center; justify-content: center">3</span>
+        <p style="margin: 0; font-size: 17px; line-height: 1.45; color: #C7D6E0"><span style="color: #EDE4D0">The board, in two taps.</span> Tap the piece you moved on the wood, then the square it landed on. Only the side to move can be picked up, and the other side&#39;s pieces sit back a shade so whose go it is is never in doubt.</p>
+      </div>
+
+      <div style="display: flex; gap: 13px">
+        <span style="flex-shrink: 0; width: 21px; height: 21px; border-radius: 50%; border: 1px solid {{accent}}; color: {{accent}}; font-family: 'JetBrains Mono', monospace; font-size: 10px; display: flex; align-items: center; justify-content: center">4</span>
+        <p style="margin: 0; font-size: 17px; line-height: 1.45; color: #C7D6E0"><span style="color: #EDE4D0">Break the rule.</span> The ring is the piece in your hand, the dots are where chess lets it go, and nothing else is accepted. When a card or the terrain overrides that, tap <span style="color: #F0A183">Break the rule</span> and the restriction lifts for one move &mdash; logged as OVERRIDE.</p>
+      </div>
+
+      <div style="display: flex; gap: 13px">
+        <span style="flex-shrink: 0; width: 21px; height: 21px; border-radius: 50%; border: 1px solid {{accent}}; color: {{accent}}; font-family: 'JetBrains Mono', monospace; font-size: 10px; display: flex; align-items: center; justify-content: center">5</span>
+        <p style="margin: 0; font-size: 17px; line-height: 1.45; color: #C7D6E0"><span style="color: #EDE4D0">Terrain marks.</span> Copy your printed map onto the grid once, at the start. Every move then records what it stepped off and what it stepped onto.</p>
+      </div>
+
+      <div style="display: flex; gap: 13px">
+        <span style="flex-shrink: 0; width: 21px; height: 21px; border-radius: 50%; border: 1px solid {{accent}}; color: {{accent}}; font-family: 'JetBrains Mono', monospace; font-size: 10px; display: flex; align-items: center; justify-content: center">6</span>
+        <p style="margin: 0; font-size: 17px; line-height: 1.45; color: #C7D6E0"><span style="color: #EDE4D0">Cards in play.</span> Give it a name and a length. It counts down one step per move and falls off by itself. Tap it to pull it early.</p>
+      </div>
+
+      <div style="display: flex; gap: 13px">
+        <span style="flex-shrink: 0; width: 21px; height: 21px; border-radius: 50%; border: 1px solid {{accent}}; color: {{accent}}; font-family: 'JetBrains Mono', monospace; font-size: 10px; display: flex; align-items: center; justify-content: center">7</span>
+        <p style="margin: 0; font-size: 17px; line-height: 1.45; color: #C7D6E0"><span style="color: #EDE4D0">After every move, it asks.</span> The band names the move and the terrain it landed on, then five plain buttons &mdash; Mine, Terrain event, Card played, Move refused, Check &mdash; and a note. One tap ends the turn, and the record builds underneath, newest first.</p>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- the loop -->
+  <div style="flex-shrink: 0; border-top: 1px solid #23394A; padding-top: 20px">
+    <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2.6px; color: #A8935A; font-weight: 500">ONE EVENING AT THE TABLE</div>
+    <div style="margin-top: 14px; display: flex; gap: 14px">
+
+      <div style="flex-grow: 1; flex-basis: 0; border-left: 1px solid #2E4A5E; padding-left: 12px">
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; color: {{accent}}">01</div>
+        <div style="margin-top: 6px; font-size: 16px; line-height: 1.35; color: #C7D6E0">Name the session and who is playing which colour.</div>
+      </div>
+
+      <div style="flex-grow: 1; flex-basis: 0; border-left: 1px solid #2E4A5E; padding-left: 12px">
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; color: {{accent}}">02</div>
+        <div style="margin-top: 6px; font-size: 16px; line-height: 1.35; color: #C7D6E0">Copy the printed map onto the grid. Once per board layout.</div>
+      </div>
+
+      <div style="flex-grow: 1; flex-basis: 0; border-left: 1px solid #2E4A5E; padding-left: 12px">
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; color: {{accent}}">03</div>
+        <div style="margin-top: 6px; font-size: 16px; line-height: 1.35; color: #C7D6E0">Play on the wood. The real piece moves first, always.</div>
+      </div>
+
+      <div style="flex-grow: 1; flex-basis: 0; border-left: 1px solid #2E4A5E; padding-left: 12px">
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; color: {{accent}}">04</div>
+        <div style="margin-top: 6px; font-size: 16px; line-height: 1.35; color: #C7D6E0">Mirror it in two taps. Flag anything the rules did to it.</div>
+      </div>
+
+      <div style="flex-grow: 1; flex-basis: 0; border-left: 1px solid {{accent}}; padding-left: 12px">
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; color: {{accent}}">05</div>
+        <div style="margin-top: 6px; font-size: 16px; line-height: 1.35; color: #C7D6E0">End the match and copy the log out. That is the playtest.</div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+</x-dc>
+
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#C8A44C","options":["#C8A44C","#B85433","#6E8257","#5B8CA8"],"section":"Theme"},"$preview":{"width":1000,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var A = this.props.accent || '#C8A44C';
+    var G = { k: '♚︎', q: '♛︎', r: '♜︎', b: '♝︎', n: '♞︎', p: '♟︎' };
+
+    // a position a few moves in, so the board reads as a real match
+    var rows = [
+      'r.bqkb.r',
+      'pppp.ppp',
+      '..n..n..',
+      '....p...',
+      '..B.P...',
+      '.....N..',
+      'PPPP.PPP',
+      'RNBQK..R'
+    ];
+    var terrain = { 27: 'mountain', 28: 'river', 35: 'river', 20: 'trench', 42: 'village' };
+    var marks = {
+      mountain: { m: '▲', c: '#CBBBA0' },
+      river: { m: '≈', c: '#7FB6D4' },
+      trench: { m: '═', c: '#D08A63' },
+      village: { m: '⌂', c: '#9DC07A' }
+    };
+    var sel = 44;                       // the bishop on c4, picked up
+    var hintSet = { 35: 1, 26: 1, 37: 1, 30: 1, 53: 1 };
+
+    var cells = [];
+    for (var i = 0; i < 64; i++) {
+      var r = Math.floor(i / 8), f = i % 8;
+      var ch = rows[r].charAt(f);
+      var isPiece = ch !== '.';
+      var isWhite = isPiece && ch === ch.toUpperCase();
+      var light = (r + f) % 2 === 0;
+      var t = terrain[i];
+      cells.push({
+        bg: light ? '#8A7B4E' : '#57492B',
+        ring: i === sel ? 'inset 0 0 0 3px ' + A : 'none',
+        hasPiece: isPiece,
+        glyph: isPiece ? G[ch.toLowerCase()] : '',
+        pColor: isWhite ? '#F4EDDC' : '#12202B',
+        pShadow: isWhite ? '0 1px 3px rgba(0,0,0,0.7)' : '0 1px 2px rgba(240,232,212,0.28)',
+        hasTerrain: !!t,
+        tMark: t ? marks[t].m : '',
+        tColor: t ? marks[t].c : '#EDE4D0',
+        isHint: !!hintSet[i]
+      });
+    }
+
+    var badges = [
+      { n: '1', x: '268px', y: '6px' },
+      { n: '2', x: '-11px', y: '44px' },
+      { n: '3', x: '-11px', y: '150px' },
+      { n: '4', x: '268px', y: '150px' },
+      { n: '5', x: '-11px', y: '250px' },
+      { n: '6', x: '-11px', y: '336px' },
+      { n: '7', x: '268px', y: '386px' }
+    ];
+
+    return { accent: A, cells: cells, badges: badges };
+  }
+}
+</script>
+</body>
+</html>

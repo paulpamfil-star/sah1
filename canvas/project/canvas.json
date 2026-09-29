@@ -1,0 +1,58 @@
+{
+  "v": 3,
+  "createdOnFiles": { "v": 1, "at": "2026-09-28T13:10:00Z" },
+  "title": "Chess The Origins — Playtest Console",
+  "launch": { "view": "canvas" },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "Console — working prototype",
+      "is_interactive": true,
+      "radius": 22
+    },
+    "Anatomy.dc.html": {
+      "x": 470,
+      "y": 0,
+      "w": 1000,
+      "h": 844,
+      "title": "Anatomy + the table loop"
+    },
+    "Record.dc.html": {
+      "x": 1550,
+      "y": 0,
+      "w": 1000,
+      "h": 844,
+      "title": "What a move records"
+    },
+    "System.dc.html": {
+      "x": 2130,
+      "y": 0,
+      "w": 1180,
+      "h": 844,
+      "title": "Design language"
+    }
+  },
+  "order": ["Main.dc.html", "Anatomy.dc.html", "Record.dc.html", "System.dc.html"],
+  "notes": {
+    "t1": {
+      "x": 0,
+      "y": -300,
+      "text": "Chess The Origins — Playtest Console",
+      "kind": "title1",
+      "maxW": 3310,
+      "color": "orange"
+    },
+    "s1": {
+      "x": -470,
+      "y": 0,
+      "w": 390,
+      "text": "The first board is the real thing, not a picture of it. Hit Play on it and the console runs — open that link on your phone, stand it next to the wooden board, and log the match by tapping squares.\n\nThe three boards to the right are the reference: what each control does, what every move records, and the visual language.",
+      "fill": "gray"
+    }
+  },
+  "designSystems": []
+}

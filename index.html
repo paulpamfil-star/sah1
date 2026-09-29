@@ -1,0 +1,1952 @@
+<title>Șah: Originile</title>
+<style>
+  /* Apple HIG shape on the game's own field: a fixed material bar, a content
+     column that scrolls under it, a material dock. Type on the iOS Dynamic
+     Type ladder — nothing below 11pt, body at 17. */
+  :root {
+    /* ground + content layers (primary / secondary / tertiary) */
+    --bg: #0B1017;
+    --bg-2: #131A23;
+    --bg-3: #1B242F;
+    --sep: rgba(235,236,240,.14);
+    --sep-strong: rgba(235,236,240,.24);
+
+    /* labels: primary / secondary / tertiary */
+    --fg: #F2F2F7;
+    --fg-2: rgba(235,236,240,.68);
+    --fg-3: rgba(235,236,240,.44);
+
+    /* accent + semantic */
+    --accent: #D8B45A;
+    --accent-press: #B8963F;
+    --on-accent: #17202B;
+    --red: #FF6B5A;
+    --green: #6FD08C;
+    --blue: #64B6F7;
+
+    /* the board's own world */
+    --sq-light: #8F8052;
+    --sq-dark: #5A4C2E;
+    --sq-light-hot: #A28F55;
+    --sq-dark-hot: #6D5B33;
+    --piece-w: #F6F0E0;
+    --piece-b: #141F29;
+
+    --ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Segoe UI", Roboto, sans-serif;
+    --voice: ui-serif, "New York", Georgia, "Times New Roman", serif;
+    --num: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+
+    --r-sm: 8px;
+    --r-md: 12px;
+    --r-lg: 16px;
+    --r-xl: 22px;
+
+    --ease: cubic-bezier(.32, .72, 0, 1);
+    color-scheme: dark;
+  }
+
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--ui);
+    font-size: 17px;
+    line-height: 1.32;
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none;
+  }
+  * { box-sizing: border-box; }
+  button { font-family: inherit; color: inherit; font-size: 17px; cursor: pointer; }
+  input { font-family: inherit; font-size: 17px; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+
+  /* It is a phone app. On a wider screen it stays a phone-shaped column
+     rather than stretching the board and the legend across the desk. */
+  .app {
+    height: 100%; width: 100%; max-width: 520px; margin: 0 auto;
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  @media (min-width: 560px) {
+    body { background: #05080C; }
+    .app { border-left: 1px solid var(--sep); border-right: 1px solid var(--sep); background: var(--bg); }
+  }
+
+  /* ── type ladder ─────────────────────────────────────────── */
+  .t-large  { font-size: 34px; line-height: 1.06; font-weight: 700; letter-spacing: -.4px; }
+  .t-title  { font-size: 28px; line-height: 1.1;  font-weight: 700; letter-spacing: -.3px; }
+  .t-title2 { font-size: 22px; line-height: 1.15; font-weight: 600; letter-spacing: -.2px; }
+  .t-head   { font-size: 17px; line-height: 1.3;  font-weight: 600; }
+  .t-body   { font-size: 17px; line-height: 1.38; font-weight: 400; }
+  .t-sub    { font-size: 15px; line-height: 1.35; font-weight: 400; color: var(--fg-2); }
+  .t-foot   { font-size: 13px; line-height: 1.3;  font-weight: 400; color: var(--fg-2); }
+  .t-cap    { font-size: 12px; line-height: 1.25; font-weight: 500; color: var(--fg-2); }
+  .t-cap2   { font-size: 11px; line-height: 1.2;  font-weight: 500; color: var(--fg-3); }
+  .voice    { font-family: var(--voice); }
+  .num      { font-family: var(--num); font-variant-numeric: tabular-nums; }
+  .caps     { text-transform: uppercase; letter-spacing: .6px; }
+
+  /* ── materials ───────────────────────────────────────────── */
+  .material {
+    background: rgba(19, 26, 35, .74);
+    backdrop-filter: blur(22px) saturate(180%);
+    -webkit-backdrop-filter: blur(22px) saturate(180%);
+  }
+
+  /* ── controls ────────────────────────────────────────────── */
+  .btn {
+    min-height: 50px; width: 100%; border: none; border-radius: var(--r-md);
+    background: var(--accent); color: var(--on-accent);
+    font-size: 17px; font-weight: 600;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    transition: transform .1s var(--ease), background-color .15s var(--ease), opacity .15s;
+  }
+  .btn:active { transform: scale(.975); background: var(--accent-press); }
+  .btn.plain { background: var(--bg-3); color: var(--fg); }
+  .btn.plain:active { background: #26313E; }
+  .btn.tinted { background: rgba(216,180,90,.16); color: var(--accent); }
+  .btn.destructive { background: rgba(255,107,90,.16); color: var(--red); }
+  .btn.destructive:active { background: rgba(255,107,90,.28); }
+  .btn:disabled { opacity: .35; }
+  .btn:disabled:active { transform: none; }
+
+  .field {
+    width: 100%; min-height: 50px; padding: 13px 15px;
+    background: var(--bg-2); border: 1px solid var(--sep); border-radius: var(--r-md);
+    color: var(--fg); outline: none;
+  }
+  .field::placeholder { color: var(--fg-3); }
+  .field:focus { border-color: var(--accent); }
+
+  .stack { display: flex; flex-direction: column; }
+
+  /* ── page (setup / pairing) ──────────────────────────────── */
+  .page { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 0 20px; padding-block: 28px 28px; }
+  .page > * + * { margin-top: 16px; }
+  .brandmark { font-size: 12px; font-weight: 700; letter-spacing: 3px; color: var(--accent); }
+
+  .row {
+    width: 100%; min-height: 64px; padding: 14px 16px; text-align: left;
+    background: var(--bg-2); border: 1px solid var(--sep); border-radius: var(--r-md);
+    display: flex; gap: 14px; align-items: center;
+    transition: transform .1s var(--ease), background-color .15s;
+  }
+  .row:active { transform: scale(.985); background: var(--bg-3); }
+  .row .lead { width: 30px; flex: 0 0 auto; display: flex; align-items: center; justify-content: center; color: var(--accent); }
+  .row .mid { flex: 1; min-width: 0; }
+  .row .chev { flex: 0 0 auto; color: var(--fg-3); }
+
+  .codecard {
+    padding: 26px 20px; text-align: center;
+    background: var(--bg-2); border: 1px solid rgba(216,180,90,.4); border-radius: var(--r-lg);
+  }
+  .codecard .v {
+    font-family: var(--num); font-size: clamp(44px, 17vw, 64px); font-weight: 700;
+    letter-spacing: 14px; color: var(--accent); line-height: 1.05; padding-left: 14px;
+  }
+  .codefield {
+    width: 100%; height: 76px; text-align: center;
+    font-family: var(--num); font-size: 38px; font-weight: 600; letter-spacing: 16px; padding-left: 16px;
+    background: var(--bg-2); border: 1px solid var(--sep); border-radius: var(--r-md);
+    color: var(--fg); outline: none; text-transform: uppercase;
+  }
+  .codefield:focus { border-color: var(--accent); }
+
+  .sides { display: flex; gap: 10px; }
+  .sides button {
+    flex: 1; min-height: 88px; border-radius: var(--r-md);
+    background: var(--bg-2); border: 1px solid var(--sep);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+    transition: transform .1s var(--ease);
+  }
+  .sides button:active { transform: scale(.975); }
+  .sides button[aria-pressed="true"] { border-color: var(--accent); background: rgba(216,180,90,.12); }
+  .sides .g { font-size: 30px; line-height: 1; }
+
+  .callout {
+    padding: 14px 16px; border-radius: var(--r-md);
+    background: rgba(255,107,90,.12); border: 1px solid rgba(255,107,90,.3); color: #FFB3A8;
+  }
+
+  /* ── match chrome ────────────────────────────────────────── */
+  .topbar {
+    flex: 0 0 auto; min-height: 48px; padding: 0 16px;
+    padding-top: env(safe-area-inset-top, 0px);
+    display: flex; align-items: center; gap: 10px;
+    border-bottom: 1px solid var(--sep); z-index: 5;
+  }
+  .topbar .sess { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 5px; flex: 0 0 auto;
+    padding: 3px 9px; border-radius: 999px; background: var(--bg-3);
+  }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--fg-3); flex: 0 0 auto; }
+  .dot.on { background: var(--green); }
+
+  .band { flex: 0 0 auto; padding: 14px 16px; border-bottom: 1px solid var(--sep); }
+  .band.active { background: var(--bg-2); }
+  .band .r1 { display: flex; align-items: center; gap: 10px; }
+  .band .turnmark { width: 14px; height: 14px; border-radius: 50%; flex: 0 0 auto; border: 1.5px solid var(--fg-3); }
+  .band h2 { margin: 0; flex: 1; min-width: 0; font-family: var(--voice); font-size: clamp(21px, 6.2vw, 26px); font-weight: 600; line-height: 1.12; letter-spacing: -.2px; }
+  .band .r2 { margin-top: 7px; display: flex; align-items: center; gap: 12px; }
+  .band .say { flex: 1; min-width: 0; font-size: 15px; line-height: 1.35; color: var(--fg-2); }
+  .band .say.alert { color: #FFB3A8; }
+
+  .tag-btn {
+    flex: 0 0 auto; min-height: 44px; padding: 0 14px; border-radius: 999px;
+    background: rgba(255,107,90,.14); border: none; color: var(--red);
+    font-size: 13px; font-weight: 600;
+    transition: transform .1s var(--ease);
+  }
+  .tag-btn:active { transform: scale(.95); }
+  .tag-btn.on { background: var(--red); color: #fff; }
+  .tag-btn.gold { background: rgba(216,180,90,.16); color: var(--accent); }
+
+  /* ── board ───────────────────────────────────────────────── */
+  .boardzone { flex: 0 0 auto; padding: 12px 16px 6px; display: flex; gap: 6px; justify-content: center; }
+  .ranks { display: flex; flex-direction: column; width: 14px; flex: 0 0 auto; }
+  .ranks div { flex: 1; display: flex; align-items: center; justify-content: center; }
+  /* the board never grows so tall that it pushes the dock off the screen */
+  .boardcol { width: 100%; max-width: min(372px, 44vh); }
+  .board {
+    position: relative;
+    display: grid; grid-template-columns: repeat(8, minmax(0, 1fr));
+    border-radius: var(--r-sm); overflow: hidden; border: 1px solid var(--sep-strong);
+  }
+  .sq {
+    position: relative; aspect-ratio: 1; padding: 0; margin: 0; border: none;
+    display: flex; align-items: center; justify-content: center; background: var(--sq-dark);
+    transition: background-color .15s;
+  }
+  .sq.lt { background: var(--sq-light); }
+  .sq.hot { background: var(--sq-dark-hot); }
+  .sq.lt.hot { background: var(--sq-light-hot); }
+  .sq.sel::after {
+    content: ""; position: absolute; inset: 0; box-shadow: inset 0 0 0 3.5px var(--accent);
+  }
+  .sq.target::after {
+    content: ""; position: absolute; inset: 0; box-shadow: inset 0 0 0 3.5px var(--blue);
+  }
+  .sq .tint { position: absolute; inset: 0; }
+  .sq .tmark { position: absolute; left: 3px; top: 2px; font-size: 13px; line-height: 1; text-shadow: 0 1px 3px rgba(0,0,0,.9); }
+  .sq .pc { position: relative; z-index: 2; font-size: clamp(23px, 7.4vw, 31px); line-height: 1; }
+  .sq .pc.w { color: var(--piece-w); text-shadow: 0 1px 3px rgba(0,0,0,.75); }
+  .sq .pc.b { color: var(--piece-b); text-shadow: 0 1px 2px rgba(246,240,224,.32); }
+  .sq .pc.muted { opacity: .78; }
+  .sq .pc.stuck { opacity: .95; }
+  .sq .pc.stuck.b { text-shadow: 0 0 7px rgba(246,240,224,.8), 0 1px 2px rgba(246,240,224,.55); }
+  .sq .pc.stuck.w { text-shadow: 0 0 7px rgba(0,0,0,.9), 0 1px 3px rgba(0,0,0,.8); }
+  .sq .dotmark { position: absolute; width: 27%; height: 27%; border-radius: 50%; background: rgba(11,16,23,.42); border: 2.5px solid var(--accent); }
+  .sq .water { position: absolute; inset: 0; background: rgba(60,130,190,.62); }
+  .sq .water::after {
+    content: ""; position: absolute; inset: 0;
+    background: repeating-linear-gradient(135deg, rgba(255,255,255,.16) 0 3px, transparent 3px 7px);
+  }
+  .files { display: flex; }
+  .files div { flex: 1; min-height: 18px; display: flex; align-items: center; justify-content: center; }
+
+  /* ── rail ───────────────────────────────────────────────── */
+  .rail { flex: 0 0 auto; padding: 0 16px 10px; display: flex; align-items: center; gap: 10px; min-height: 44px; }
+  .rail .strip { flex: 1; min-width: 0; display: flex; gap: 8px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .rail .strip::-webkit-scrollbar { display: none; }
+  .chipcard {
+    flex: 0 0 auto; min-height: 36px; padding: 0 12px; border-radius: 999px;
+    background: rgba(216,180,90,.15); border: 1px solid rgba(216,180,90,.42);
+    display: flex; align-items: center; gap: 8px;
+    transition: transform .1s var(--ease);
+  }
+  .chipcard:active { transform: scale(.95); }
+  .chipcard .nm { font-size: 13px; font-weight: 600; color: var(--accent); }
+  .chipcard .lf { font-family: var(--num); font-size: 12px; color: var(--fg-2); }
+
+  /* ── pane ────────────────────────────────────────────────── */
+  .pane { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; border-top: 1px solid var(--sep); }
+  .pane .empty { padding: 18px 16px; color: var(--fg-3); }
+
+  .mv { padding: 9px 16px; display: flex; align-items: baseline; gap: 11px; border-bottom: 1px solid var(--sep); }
+  .mv.newest { background: rgba(216,180,90,.07); }
+  .mv .no { font-family: var(--num); font-size: 12px; color: var(--fg-3); width: 28px; flex: 0 0 auto; }
+  .mv .san { font-family: var(--num); font-size: 15px; color: var(--fg-2); flex: 0 0 auto; }
+  .mv.newest .san { color: var(--fg); font-weight: 600; }
+  .mv .meta { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; gap: 5px; align-items: baseline; }
+  .badge { font-size: 11px; font-weight: 600; letter-spacing: .4px; padding: 3px 7px; border-radius: 999px; }
+  .badge.red { color: #FFB3A8; background: rgba(255,107,90,.2); }
+  .badge.gold { color: var(--accent); background: rgba(216,180,90,.18); }
+  .badge.grey { color: var(--fg-2); background: rgba(235,236,240,.12); }
+  .badge.green { color: var(--green); background: rgba(111,208,140,.16); }
+  .mv .said { font-size: 13px; color: var(--fg-3); font-style: italic; }
+  /* ── dock ────────────────────────────────────────────────── */
+  .dock {
+    flex: 0 0 auto; display: flex; border-top: 1px solid var(--sep);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .dock button {
+    flex: 1; min-height: 56px; background: transparent; border: none;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+    font-size: 12px; font-weight: 500; color: var(--fg-2);
+    transition: transform .1s var(--ease), color .15s;
+  }
+  .dock button:active { transform: scale(.94); color: var(--fg); }
+  .dock button:disabled { color: var(--fg-3); }
+  .dock .ic { font-size: 19px; line-height: 1; }
+
+  /* ── sheet ───────────────────────────────────────────────── */
+  .scrim {
+    position: fixed; inset: 0; z-index: 40; background: rgba(0,0,0,.5);
+    display: flex; flex-direction: column; justify-content: flex-end;
+    animation: fade .22s var(--ease);
+  }
+  .scrim > .dismiss { flex: 1; background: transparent; border: none; }
+  .sheet {
+    flex: 0 0 auto; background: var(--bg-2); border-radius: var(--r-xl) var(--r-xl) 0 0;
+    padding: 10px 20px 20px; padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+    max-height: 82vh; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    animation: rise .34s var(--ease);
+  }
+  .grabber { width: 38px; height: 5px; border-radius: 3px; background: var(--sep-strong); margin: 0 auto 14px; }
+  .sheet > * + * { margin-top: 14px; }
+  @keyframes rise { from { transform: translateY(100%); } to { transform: none; } }
+  @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+
+  .deck { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .deckcard {
+    min-height: 116px; padding: 14px 12px; border-radius: var(--r-md);
+    background: var(--bg-3); border: 1px solid var(--sep); text-align: left;
+    display: flex; flex-direction: column; gap: 6px;
+    transition: transform .1s var(--ease);
+  }
+  .deckcard:active { transform: scale(.97); }
+  .deckcard .cn { font-family: var(--voice); font-size: 17px; font-weight: 600; line-height: 1.15; }
+  .deckcard .cr { font-size: 11px; font-weight: 600; letter-spacing: .5px; color: var(--accent); text-transform: uppercase; }
+  .deckcard .cd { font-size: 12px; color: var(--fg-2); line-height: 1.3; }
+
+  .stepper { display: flex; align-items: center; gap: 12px; }
+  .stepper button { width: 56px; min-height: 56px; border-radius: var(--r-md); background: var(--bg-3); border: 1px solid var(--sep); font-size: 24px; }
+  .stepper button:active { transform: scale(.94); }
+  .stepper .v { flex: 1; text-align: center; font-family: var(--num); font-size: 22px; font-weight: 600; }
+
+  .menurow {
+    width: 100%; min-height: 60px; padding: 12px 16px; margin: 0;
+    display: flex; align-items: center; gap: 14px; text-align: left;
+    background: var(--bg-3); border: 1px solid var(--sep); border-radius: var(--r-md);
+    transition: transform .1s var(--ease);
+  }
+  .menurow:active { transform: scale(.985); }
+  .menurow .ic { width: 28px; flex: 0 0 auto; text-align: center; font-size: 18px; color: var(--accent); }
+  .menurow .mid { flex: 1; min-width: 0; }
+  .switch { width: 50px; height: 30px; border-radius: 999px; background: var(--sep-strong); display: flex; align-items: center; padding: 2px; flex: 0 0 auto; transition: background-color .2s var(--ease); }
+  .switch.on { background: var(--green); justify-content: flex-end; }
+  .switch i { width: 26px; height: 26px; border-radius: 50%; background: #fff; display: block; }
+
+  /* ── card reveal ─────────────────────────────────────────── */
+  .reveal {
+    position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center;
+    padding: 24px; background: rgba(6,9,13,.82);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    animation: fade .2s var(--ease);
+  }
+  .bigcard {
+    width: min(100%, 320px); border-radius: var(--r-xl); padding: 28px 24px 24px;
+    text-align: center; border: 1px solid rgba(216,180,90,.55);
+    background: linear-gradient(170deg, #1E2733 0%, #141C25 100%);
+    box-shadow: 0 30px 70px rgba(0,0,0,.6);
+    animation: dealIn .55s var(--ease);
+  }
+  .bigcard.light { background: linear-gradient(170deg, #F4F1E8 0%, #E3DCCA 100%); border-color: rgba(88,72,30,.5); color: #1C232C; }
+  .bigcard .mark {
+    width: 62px; height: 62px; border-radius: 50%; margin: 0 auto 16px;
+    background: var(--accent); color: var(--on-accent);
+    display: flex; align-items: center; justify-content: center; font-size: 27px;
+  }
+  .bigcard .ro { font-size: 12px; font-weight: 700; letter-spacing: 2.4px; color: var(--accent); text-transform: uppercase; }
+  .bigcard.light .ro { color: #7A5F1E; }
+  .bigcard .en { font-family: var(--voice); font-size: 30px; font-weight: 600; line-height: 1.1; margin-top: 8px; letter-spacing: -.2px; }
+  .bigcard .txt { font-size: 16px; line-height: 1.4; color: var(--fg-2); margin-top: 14px; }
+  .bigcard.light .txt { color: #46505C; }
+  .bigcard .dur { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--sep); font-family: var(--num); font-size: 13px; color: var(--accent); }
+  .bigcard.light .dur { border-top-color: rgba(28,35,44,.18); color: #7A5F1E; }
+  @keyframes dealIn {
+    from { transform: translateY(26px) scale(.88) rotate(-3deg); opacity: 0; }
+    to   { transform: none; opacity: 1; }
+  }
+
+
+  /* ── hazards: how they arrive, how they leave ────────────── */
+  /* Every hazard announces itself on the square it fired on. The board is
+     the only place a player looks, so that is where the news happens. */
+
+  .sq.fx { z-index: 2; }
+  .sq.fx::before {
+    content: ""; position: absolute; inset: 0; z-index: 3;
+    box-shadow: inset 0 0 0 3px var(--accent);
+    animation: fxRing 1.1s var(--ease) 2 both;
+  }
+  @keyframes fxRing {
+    0%   { opacity: 0; transform: scale(1.5); }
+    45%  { opacity: 1; transform: none; }
+    100% { opacity: 0; }
+  }
+
+  /* water rises into the square, then runs while it is there */
+  .sq .water { animation: floodIn .55s var(--ease) both; }
+  .sq .water::after { animation: current 2.6s linear infinite; }
+  .sq.fading .water { animation: floodOut .7s var(--ease) both; }
+  @keyframes floodIn  { from { transform: translateY(-100%); } to { transform: none; } }
+  @keyframes floodOut { from { transform: none; opacity: 1; } to { transform: translateY(100%); opacity: 0; } }
+  @keyframes current  { to { background-position: 28px 0; } }
+
+  /* the mud swallows the square and the piece sinks into it */
+  .sq .mire { position: absolute; inset: 0; background: rgba(96,84,50,.6); animation: mireIn .5s var(--ease) both; }
+  .sq .mire::after {
+    content: ""; position: absolute; inset: 0;
+    background:
+      radial-gradient(circle at 28% 64%, rgba(0,0,0,.42) 0 13%, transparent 14%),
+      radial-gradient(circle at 70% 36%, rgba(0,0,0,.34) 0 9%, transparent 10%),
+      radial-gradient(circle at 52% 82%, rgba(0,0,0,.3) 0 7%, transparent 8%);
+    animation: bubble 2.2s ease-in-out infinite;
+  }
+  .sq.fading .mire { animation: mireOut .7s var(--ease) both; }
+  @keyframes mireIn  { 0% { transform: scale(.3); opacity: 0; } 65% { transform: scale(1.1); } 100% { transform: none; opacity: 1; } }
+  @keyframes mireOut { to { opacity: 0; transform: scale(.7); } }
+  @keyframes bubble  { 0%, 100% { opacity: .4; } 50% { opacity: .85; } }
+  .sq .pc.stuck { animation: sink 2.6s ease-in-out infinite; }
+  @keyframes sink { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(3.5px); } }
+
+  /* the ground opens */
+  .sq .gash {
+    position: absolute; inset: 14% 8%; border-radius: 3px; z-index: 2;
+    background: linear-gradient(180deg, #341508 0%, #0A0503 60%, #000 100%);
+    box-shadow: inset 0 0 10px #000, 0 0 12px rgba(0,0,0,.7);
+    animation: crack .6s var(--ease) both;
+  }
+  @keyframes crack {
+    0%   { transform: scaleX(0) scaleY(.5); opacity: 0; }
+    55%  { transform: scaleX(1.15) scaleY(1.08); opacity: 1; }
+    100% { transform: none; opacity: 1; }
+  }
+
+  /* a gust crosses the square and is gone */
+  .sq .gust {
+    position: absolute; inset: 0; z-index: 3; pointer-events: none;
+    background: repeating-linear-gradient(104deg, rgba(255,255,255,.55) 0 2px, transparent 2px 10px);
+    animation: gust .8s var(--ease) 2 both;
+  }
+  @keyframes gust {
+    0%   { transform: translateX(-120%); opacity: 0; }
+    35%  { opacity: .9; }
+    100% { transform: translateX(120%); opacity: 0; }
+  }
+
+  /* the frost takes the whole board at once */
+  .frostveil {
+    position: absolute; inset: 0; z-index: 4; pointer-events: none;
+    background: linear-gradient(180deg, rgba(198,232,250,0) 0%, rgba(198,232,250,.6) 48%, rgba(198,232,250,0) 100%);
+    animation: frostSweep 1.7s var(--ease) both;
+  }
+  @keyframes frostSweep {
+    0%   { opacity: 0; transform: translateY(-60%); }
+    35%  { opacity: 1; }
+    100% { opacity: 0; transform: translateY(60%); }
+  }
+  .sq .pc.frozen { filter: drop-shadow(0 0 5px #9ED8F0); }
+
+  /* a piece comes back */
+  .sq .pc.reborn { animation: reborn .8s var(--ease) both; }
+  @keyframes reborn {
+    0%   { opacity: 0; transform: translateY(10px) scale(.5); filter: brightness(3); }
+    60%  { opacity: 1; filter: brightness(1.8); }
+    100% { transform: none; filter: none; }
+  }
+
+  /* the countdown a hazard carries, on the square itself */
+  .sq .ttimer {
+    position: absolute; right: 2px; bottom: 0; z-index: 3;
+    font-family: var(--num); font-size: 10px; font-weight: 700; color: #fff;
+    text-shadow: 0 1px 3px rgba(0,0,0,.95), 0 0 6px rgba(0,0,0,.8);
+  }
+  .sq .ttimer.last { color: #FFD9A8; animation: tick 1s ease-in-out infinite; }
+  @keyframes tick { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+
+  /* a square that has already fired never fires again */
+  .sq .safemark {
+    position: absolute; left: 3px; bottom: 3px; width: 4px; height: 4px;
+    border-radius: 50%; background: rgba(240,244,250,.3);
+  }
+
+  /* the rail chip counts down with it */
+  .chipcard.low { border-color: rgba(255,107,90,.55); background: rgba(255,107,90,.14); }
+  .chipcard.low .nm { color: #FFB3A8; }
+
+  .tierline { font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+    .btn:active, .row:active, .sq, .dock button:active { transform: none !important; }
+  }
+</style>
+
+<div class="app" id="app"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  var GLYPH = { k: "♚︎", q: "♛︎", r: "♜︎", b: "♝︎", n: "♞︎", p: "♟︎" };
+  var PNAME = { k: "rege", q: "damă", r: "turn", b: "nebun", n: "cal", p: "pion" };
+  var PDEF  = { k: "regele", q: "dama", r: "turnul", b: "nebunul", n: "calul", p: "pionul" };
+  var PLETTER = { k: "R", q: "D", r: "T", b: "N", n: "C", p: "" };
+  var CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+
+  // ───────── the hazards ─────────
+  // Nothing here is chosen by a player and nothing is on the board at the
+  // start. A hazard is drawn only when a piece LANDS on a square, by the
+  // weights below, and the square it fired on is spent for the rest of the
+  // match. Weights are out of 100, so w reads straight as a percentage of
+  // whatever fires.
+  var HAZARDS = [
+    {
+      id: "swamp", w: 30, ro: "Mlaștină", tier: "Comun", mark: "░", dur: 2, kind: "mire",
+      text: "Piesa s-a împotmolit. Nu se mai poate mișca până se usucă pământul.",
+      color: "#D8C9A4"
+    },
+    {
+      id: "wind", w: 27, ro: "Vânt", tier: "Comun", mark: "↝", dur: 0, kind: "shove",
+      text: "Piesa e luată de vânt și împinsă o căsuță. Dacă n-are unde, rămâne pe loc.",
+      color: "#BFE2F5"
+    },
+    {
+      id: "river", w: 18, ro: "Râu", tier: "Neobișnuit", mark: "≈", dur: 5, kind: "barrier",
+      text: "Un șir de căsuțe se inundă. Nicio piesă nu intră și nu trece peste apă — numai caii sar.",
+      color: "#9FD6F5"
+    },
+    {
+      id: "frost", w: 14, ro: "Ger", tier: "Neobișnuit", mark: "❄", dur: 3, kind: "global",
+      text: "Caii mor. Până trece gerul, cavalerii tăi sunt pioni — merg pe jos și atacă precum pionii.",
+      color: "#DDF0FA"
+    },
+    {
+      id: "revive", w: 8, ro: "Înviere", tier: "Rar", mark: "✟", dur: 0, kind: "revive",
+      text: "O piesă căzută se întoarce pe tablă. Alegi care, apoi alegi căsuța liberă unde reapare.",
+      color: "#F0DCA8"
+    },
+    {
+      id: "trench", w: 3, ro: "Cădere în tranșeu", tier: "Unic", mark: "═", dur: 0, kind: "kill",
+      text: "Pământul cedează sub piesă. Dispare de pe tablă pentru totdeauna. Niciodată regele.",
+      color: "#F3C3A8", noKing: true, once: true
+    }
+  ];
+  var HZ = {}; HAZARDS.forEach(function (h) { HZ[h.id] = h; });
+
+  // How often anything happens at all. The chance climbs for every quiet ply
+  // past the gap, so a long peaceful stretch gets steadily more dangerous and
+  // a match cannot go dead. It drops back the moment something fires.
+  var SAFE_PLIES = 6;     // the opening is never touched
+  var MIN_GAP = 3;        // never two hazards on top of each other
+  var P_BASE = 0.16, P_STEP = 0.04, P_MAX = 0.45;
+
+  var WINDS = [
+    { d: "nord", dr: -1, df: 0 }, { d: "sud", dr: 1, df: 0 },
+    { d: "est", dr: 0, df: 1 }, { d: "vest", dr: 0, df: -1 }
+  ];
+
+  // ───────── local state ─────────
+  var L = {
+    screen: "start", mode: "solo", mySide: null,
+    code: "", codeDraft: "", session: "Test 01", myName: "", pickSide: "w",
+    sel: null, override: false, say: "", modal: null,
+    hints: true, pendingPromo: null, exportFmt: "text", copied: "",
+    linked: false, dbErr: "", busy: false, now: Date.now(),
+    reveal: null,          // {hz, light}
+    fxKey: null, fxOn: false,      // a hazard arriving
+    fadeKey: null, fadeOn: false,  // a hazard washing off
+
+    confirmReset: false, forceOpen: false
+  };
+
+  // ───────── shared state ─────────
+  function startBoard() {
+    var back = ["r", "n", "b", "q", "k", "b", "n", "r"], b = [], i;
+    for (i = 0; i < 64; i++) b.push(null);
+    for (i = 0; i < 8; i++) {
+      b[i] = { t: back[i], c: "b" }; b[8 + i] = { t: "p", c: "b" };
+      b[48 + i] = { t: "p", c: "w" }; b[56 + i] = { t: back[i], c: "w" };
+    }
+    return b;
+  }
+
+  function freshMatch() {
+    return {
+      v: 3, session: "Test 01", white: null, black: null,
+      board: startBoard(), turn: "w", moveNo: 1, phase: "move",
+      log: [], hz: [],            // hazards in play
+      spent: [],                  // squares that already fired — never again
+      used: [],                   // one-per-match hazards already spent
+      lastHz: 0,                  // ply of the last hazard
+      fallen: [], lastMove: null, fx: null, fade: null,
+      pick: null,                 // {hzId, side, stage, ...} when a choice is owed
+      startedAt: Date.now(), nextId: 1
+    };
+  }
+  var M = freshMatch();
+  // ───────── the network ─────────
+  // Two backends behind one seam. Inside a Claude artifact the page uses the
+  // artifact's own store; served as a plain page (GitHub Pages) it uses
+  // Supabase. The publishable key is meant to ship in client code — row level
+  // security on the table is what actually guards the data.
+  var SUPA = {
+    url: "https://muqagbawjzudnxoqwhen.supabase.co",
+    key: "sb_publishable_NWOulDK-a9kak7lHNpebRA_HzNt9n_Q",
+    cdn: "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"
+  };
+
+  var Net = { kind: null, ready: false, sb: null, channel: null, ref: null, off: null };
+  var room = null, myId = null, myTag = null, lastSentRev = 0;
+
+  // Snapshots from the store arrive FROZEN. This file runs in strict mode, so
+  // writing to one throws — which is what silently broke joining. Everything
+  // that becomes our mutable match state goes through here first.
+  function thaw(o) {
+    try { return JSON.parse(JSON.stringify(o)); } catch (e) { return null; }
+  }
+
+  function deviceId() {
+    try {
+      var k = "cto-device-id", v = window.localStorage.getItem(k);
+      if (!v) { v = "d" + Math.random().toString(36).slice(2, 12); window.localStorage.setItem(k, v); }
+      return v;
+    } catch (e) { return "d" + Math.random().toString(36).slice(2, 12); }
+  }
+
+  function loadScript(src) {
+    return new Promise(function (ok, no) {
+      var s = document.createElement("script");
+      s.src = src; s.async = true;
+      s.onload = function () { ok(); };
+      s.onerror = function () { no(new Error("could not load " + src)); };
+      document.head.appendChild(s);
+    });
+  }
+
+  function boot() {
+    myId = deviceId();
+    myTag = myId + "." + Math.random().toString(36).slice(2, 8);
+
+    if (window.claude && window.claude.use) {
+      window.claude.use("user")
+        .then(function (u) { return u ? u.id() : null; })
+        .then(function (id) { if (id) myId = id; })
+        .catch(function () { });
+      window.claude.use("db").then(function (d) {
+        if (d) { Net.sb = null; Net.db = d; Net.kind = "claude"; Net.ready = true; }
+        render();
+      }).catch(function () { render(); });
+      window.claude.use("room").then(function (r) {
+        room = r;
+        if (!r) return;
+        r.onPeers(function (ch) {
+          var linked = ch.peers.some(function (p) { return !p.isMe && p.kind === "viewer"; });
+          if (linked !== L.linked) { L.linked = linked; render(); }
+        }, function () { });
+      }).catch(function () { room = null; });
+      return;
+    }
+
+    if (!SUPA.url || SUPA.url.indexOf("http") !== 0) { render(); return; }
+    loadScript(SUPA.cdn).then(function () {
+      if (!window.supabase || !window.supabase.createClient) throw new Error("no client");
+      Net.sb = window.supabase.createClient(SUPA.url, SUPA.key);
+      Net.kind = "supabase"; Net.ready = true;
+      render();
+    }).catch(function () {
+      Net.kind = null; Net.ready = false;
+      L.dbErr = "Nu am găsit serverul de meciuri. Pe un singur telefon merge oricum.";
+      render();
+    });
+  }
+
+  // What to say when the live side is unavailable — it differs per backend.
+  function offlineNote() {
+    if (window.claude) return "Meciurile live nu sunt disponibile aici. Amândoi trebuie să fiți conectați în același spațiu Claude și să deschideți același link.";
+    return "Nu am găsit serverul de meciuri. Verifică conexiunea — pe un singur telefon merge oricum.";
+  }
+
+  // ───────── persistence ─────────
+  var LKEY = "cto-solo-v3";
+  function saveSolo() { if (L.mode === "solo") { try { window.localStorage.setItem(LKEY, JSON.stringify(M)); } catch (e) { } } }
+  function loadSolo() {
+    try {
+      var raw = window.localStorage.getItem(LKEY); if (!raw) return null;
+      var o = JSON.parse(raw); return (o && o.v === 3 && o.board && o.board.length === 64) ? o : null;
+    } catch (e) { return null; }
+  }
+
+  function newCode() {
+    var s = ""; for (var i = 0; i < 4; i++) s += CODE_ALPHABET.charAt(Math.floor(Math.random() * CODE_ALPHABET.length));
+    return s;
+  }
+
+  // Read one match. Resolves null when there is no such code.
+  Net.get = function (code) {
+    if (Net.kind === "claude") {
+      return Net.db.doc("matches/" + code).get().then(function (s) {
+        return s.exists ? thaw(s.data()) : null;
+      });
+    }
+    return Net.sb.from("matches").select("state").eq("code", code).maybeSingle()
+      .then(function (r) {
+        if (r.error) throw r.error;
+        return r.data ? thaw(r.data.state) : null;
+      });
+  };
+
+  // Write the whole match. Every write carries a rising rev and the writer's
+  // tag, so a backend that echoes our own writes back can be told apart.
+  Net.put = function (code, state) {
+    state.rev = (state.rev || 0) + 1;
+    state.wby = myTag;
+    lastSentRev = state.rev;
+    if (Net.kind === "claude") return Net.db.doc("matches/" + code).set(state);
+    return Net.sb.from("matches")
+      .upsert({ code: code, state: state, updated_at: new Date().toISOString() })
+      .then(function (r) { if (r.error) throw r.error; });
+  };
+
+  Net.watch = function (code, onState, onErr) {
+    if (Net.off) { Net.off(); Net.off = null; }
+
+    if (Net.kind === "claude") {
+      var ref = Net.db.doc("matches/" + code);
+      Net.off = ref.onSnapshot(function (snap) {
+        if (!snap.exists) return;
+        if (snap.metadata && snap.metadata.hasPendingWrites) return;
+        var d = thaw(snap.data());
+        if (d && d.board) onState(d);
+      }, function (e) {
+        onErr(e.code === "not_granted"
+          ? "Telefonul acesta nu poate intra în meciuri live."
+          : "S-a pierdut legătura. Reîncarcă pagina.");
+      });
+      return;
+    }
+
+    var ch = Net.sb.channel("match-" + code, { config: { presence: { key: myTag } } });
+    ch.on("postgres_changes",
+      { event: "*", schema: "public", table: "matches", filter: "code=eq." + code },
+      function (payload) {
+        var row = payload && payload.new;
+        if (!row || !row.state) return;
+        var st = thaw(row.state);
+        if (!st || !st.board) return;
+        if (st.wby === myTag && st.rev === lastSentRev) return;   // our own echo
+        onState(st);
+      });
+    ch.on("presence", { event: "sync" }, function () {
+      var n = Object.keys(ch.presenceState() || {}).length;
+      var linked = n > 1;
+      if (linked !== L.linked) { L.linked = linked; render(); }
+    });
+    ch.subscribe(function (status) {
+      if (status === "SUBSCRIBED") { ch.track({ at: Date.now() }); }
+      else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+        onErr("S-a pierdut legătura. Reîncarcă pagina.");
+      }
+    });
+    Net.channel = ch;
+    Net.off = function () { try { Net.sb.removeChannel(ch); } catch (e) { } };
+  };
+
+  function pushMatch() {
+    if (L.mode === "solo") { saveSolo(); render(); return Promise.resolve(); }
+    render();
+    if (!L.code || !Net.ready) return Promise.resolve();
+    return Net.put(L.code, M).catch(function (e) {
+      L.dbErr = (e && e.code === "revoked")
+        ? "Am pierdut accesul la meciul acesta."
+        : "Mutarea nu s-a salvat. Verifică conexiunea.";
+      render();
+    });
+  }
+
+  function watchMatch(code) {
+    if (!Net.ready) return;
+    Net.watch(code, function (d) {
+      var hadTurn = M.turn;
+      M = d;
+      if (!M.hz) M.hz = [];
+      if (!M.spent) M.spent = [];
+      if (!M.used) M.used = [];
+      if (!M.fallen) M.fallen = [];
+      // whatever we were told off for is no longer the situation
+      if (M.turn !== hadTurn) { L.say = ""; L.sel = null; }
+      if (M.fx && M.fx.key !== L.fxKey) announce(M.fx);
+      if (L.screen === "waiting" && M.white && M.black) L.screen = "match";
+      render();
+    }, function (msg) {
+      L.dbErr = msg;
+      render();
+    });
+  }
+
+  // ───────── what is in play ─────────
+  function hasHz(id) { return (M.hz || []).some(function (e) { return e.hzId === id; }); }
+  function stuckSquares() {
+    var out = {};
+    (M.hz || []).forEach(function (e) {
+      if (e.hzId === "swamp" && typeof e.square === "number") out[e.square] = true;
+    });
+    return out;
+  }
+  function barrierSet() {
+    var out = {};
+    (M.hz || []).forEach(function (e) {
+      if (e.hzId === "river") (e.cells || []).forEach(function (c) { out[c] = true; });
+    });
+    return out;
+  }
+  function spentSet() {
+    var out = {};
+    (M.spent || []).forEach(function (i) { out[i] = true; });
+    return out;
+  }
+  function timerAt(i) {
+    var left = 0;
+    (M.hz || []).forEach(function (e) {
+      if (e.square === i || (e.cells && e.cells.indexOf(i) >= 0)) left = Math.max(left, e.left);
+    });
+    return left;
+  }
+
+  // ───────── movement ─────────
+  function pawnLikeReach(board, from, colour) {
+    var out = {}, r = Math.floor(from / 8), f = from % 8;
+    var dir = colour === "w" ? -1 : 1;
+    var wall = barrierSet();
+    function put(rr, ff, mode) {
+      if (rr < 0 || rr > 7 || ff < 0 || ff > 7) return;
+      var at = rr * 8 + ff;
+      if (wall[at]) return;
+      var q = board[at];
+      if (q && q.c === colour) return;
+      if (mode === "quiet" && q) return;
+      if (mode === "cap" && !q) return;
+      out[at] = true;
+    }
+    put(r + dir, f, "quiet");
+    put(r + dir, f - 1, "cap");
+    put(r + dir, f + 1, "cap");
+    return out;
+  }
+
+  function reach(board, from) {
+    var p = board[from];
+    if (!p) return {};
+    if (stuckSquares()[from]) return {};                    // împotmolită
+    if (p.t === "n" && hasHz("frost")) return pawnLikeReach(board, from, p.c);
+
+    var wall = barrierSet();
+    var out = {}, r = Math.floor(from / 8), f = from % 8, a, dr, df;
+
+    function put(rr, ff, mode) {
+      if (rr < 0 || rr > 7 || ff < 0 || ff > 7) return false;
+      var at = rr * 8 + ff;
+      if (wall[at]) return false;                            // apa oprește tot
+      var q = board[at];
+      if (q && q.c === p.c) return false;
+      if (mode === "quiet" && q) return false;
+      if (mode === "cap" && !q) return false;
+      out[at] = true;
+      return !q;
+    }
+    function slide(sr, sf) { var rr = r + sr, ff = f + sf; while (put(rr, ff, "any")) { rr += sr; ff += sf; } }
+
+    var t = p.t;
+    if (t === "p") {
+      var dir = p.c === "w" ? -1 : 1, home = p.c === "w" ? 6 : 1;
+      if (put(r + dir, f, "quiet") && r === home) put(r + 2 * dir, f, "quiet");
+      put(r + dir, f - 1, "cap"); put(r + dir, f + 1, "cap");
+    } else if (t === "n") {
+      var j = [[-2, -1], [-2, 1], [-1, -2], [-1, 2], [1, -2], [1, 2], [2, -1], [2, 1]];
+      for (a = 0; a < j.length; a++) put(r + j[a][0], f + j[a][1], "any");   // caii sar peste apă
+    } else if (t === "k") {
+      for (dr = -1; dr <= 1; dr++) for (df = -1; df <= 1; df++) if (dr || df) put(r + dr, f + df, "any");
+    } else {
+      if (t === "r" || t === "q") { slide(-1, 0); slide(1, 0); slide(0, -1); slide(0, 1); }
+      if (t === "b" || t === "q") { slide(-1, -1); slide(-1, 1); slide(1, -1); slide(1, 1); }
+    }
+    return out;
+  }
+
+  // ───────── helpers ─────────
+  function sqName(i) { return "abcdefgh".charAt(i % 8) + String(8 - Math.floor(i / 8)); }
+  function idxOf(n) { return (8 - parseInt(n.charAt(1), 10)) * 8 + "abcdefgh".indexOf(n.charAt(0)); }
+  function typeOf(n) { return { rege: "k", "damă": "q", turn: "r", nebun: "b", cal: "n", pion: "p" }[n] || "q"; }
+  function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+  function sideName(c) {
+    var seat = c === "w" ? M.white : M.black;
+    return (seat && seat.name) ? seat.name : (c === "w" ? "Albul" : "Negrul");
+  }
+  function myTurn() { return L.mode === "solo" ? true : L.mySide === M.turn; }
+  function myPick() { return L.mode === "solo" || (M.pick && M.pick.side === L.mySide); }
+  function flipped() { return L.mySide === "b"; }
+  function clockText() {
+    var s = Math.max(0, Math.floor((L.now - (M.startedAt || L.now)) / 1000));
+    var m = Math.floor(s / 60), q = s % 60;
+    return (m < 10 ? "0" : "") + m + ":" + (q < 10 ? "0" : "") + q;
+  }
+  function lastMove() { return M.log.length ? M.log[M.log.length - 1] : null; }
+  function plural(n, one, many) { return n + " " + (n === 1 ? one : many); }
+
+  // ───────── the draw ─────────
+  // Only the phone that made the move rolls, and it writes the result into the
+  // shared match. Two phones can never roll different dice for the same move.
+  function hazardChance() {
+    var ply = M.log.length;
+    if (ply <= SAFE_PLIES) return 0;
+    var quiet = ply - (M.lastHz || SAFE_PLIES);
+    if (quiet < MIN_GAP) return 0;
+    return Math.min(P_MAX, P_BASE + P_STEP * (quiet - MIN_GAP));
+  }
+
+  function drawHazard(at) {
+    var p = M.board[at];
+    var pool = HAZARDS.filter(function (h) {
+      if (h.once && (M.used || []).indexOf(h.id) >= 0) return false;
+      if (h.noKing && p && p.t === "k") return false;
+      if (h.id === "revive" && !(M.fallen || []).length) return false;
+      return true;
+    });
+    var total = 0, i;
+    for (i = 0; i < pool.length; i++) total += pool[i].w;
+    if (!total) return null;
+    var r = Math.random() * total;
+    for (i = 0; i < pool.length; i++) { r -= pool[i].w; if (r <= 0) return pool[i]; }
+    return pool[pool.length - 1];
+  }
+
+  // The water comes in along the rank or file the piece landed on, so the
+  // flood is visibly a consequence of where you stepped.
+  function riverCells(at) {
+    var len = 3 + Math.floor(Math.random() * 2);
+    var r = Math.floor(at / 8), f = at % 8, tries = 0, i, cells;
+    while (tries++ < 60) {
+      var horizontal = tries <= 30 ? (Math.random() < .5) : (tries % 2 === 0);
+      var start = Math.floor(Math.random() * (8 - len + 1));
+      cells = [];
+      for (i = 0; i < len; i++) cells.push(horizontal ? (r * 8 + start + i) : ((start + i) * 8 + f));
+      var ok = true;
+      for (i = 0; i < cells.length; i++) if (M.board[cells[i]]) { ok = false; break; }
+      if (ok) return cells;
+    }
+    // nowhere clear on that line — flood whatever empty squares surround it
+    cells = [];
+    for (i = 0; i < 64 && cells.length < len; i++) {
+      var rr = Math.floor(i / 8), ff = i % 8;
+      if (!M.board[i] && Math.abs(rr - r) <= 2 && Math.abs(ff - f) <= 2) cells.push(i);
+    }
+    return cells;
+  }
+
+  function announce(fx) {
+    L.fxKey = fx.key; L.fxOn = true;
+    setTimeout(function () { L.fxOn = false; render(); }, 1900);
+    var h = HZ[fx.id];
+    if (h) {
+      L.reveal = { hz: h, light: fx.side === "w" };
+      setTimeout(function () {
+        if (L.reveal && L.reveal.hz === h) { L.reveal = null; render(); }
+      }, 3000);
+    }
+  }
+
+  function fireHazard(h, at) {
+    var side = M.turn;
+    M.spent = (M.spent || []).concat([at]);
+    M.lastHz = M.log.length;
+    if (h.once) M.used = (M.used || []).concat([h.id]);
+
+    var cells = [at], say = "";
+    var p = M.board[at];
+    var who = p ? PDEF[p.t] : "piesa";
+
+    // born is the ply it arrived on. endTurn does not tick a hazard on the turn
+    // it fired, or a swamp would dry up before the mired player ever moved.
+    var born = M.log.length;
+
+    if (h.kind === "mire") {
+      M.hz = M.hz.concat([{ id: M.nextId++, hzId: "swamp", left: h.dur, born: born, square: at, from: M.moveNo }]);
+      say = cap(who) + " de pe " + sqName(at) + " s-a împotmolit.";
+
+    } else if (h.kind === "barrier") {
+      cells = riverCells(at);
+      M.hz = M.hz.filter(function (e) { return e.hzId !== "river"; })
+        .concat([{ id: M.nextId++, hzId: "river", left: h.dur, born: born, cells: cells, from: M.moveNo }]);
+      say = "Apele au venit peste " + cells.map(sqName).join(", ") + ".";
+
+    } else if (h.kind === "global") {
+      M.hz = M.hz.filter(function (e) { return e.hzId !== "frost"; })
+        .concat([{ id: M.nextId++, hzId: "frost", left: h.dur, born: born, from: M.moveNo }]);
+      cells = [];
+      say = "A venit gerul. Cavalerii merg pe jos.";
+
+    } else if (h.kind === "kill") {
+      var bk = M.board.slice();
+      bk[at] = null;
+      M.board = bk;
+      if (p) M.fallen = (M.fallen || []).concat([{ t: p.t, c: p.c }]);
+      say = "Pământul a cedat. " + cap(who) + " de pe " + sqName(at) + " nu mai e.";
+
+    } else if (h.kind === "shove") {
+      var w = WINDS[Math.floor(Math.random() * WINDS.length)];
+      var rr = Math.floor(at / 8) + w.dr, ff = (at % 8) + w.df;
+      var to = rr * 8 + ff;
+      if (rr < 0 || rr > 7 || ff < 0 || ff > 7 || M.board[to] || barrierSet()[to]) {
+        say = "Vântul bate dinspre " + w.d + ", dar " + who + " n-are unde. Rămâne pe loc.";
+      } else {
+        var bw = M.board.slice();
+        bw[to] = p; bw[at] = null;
+        M.board = bw;
+        M.lastMove = { from: at, to: to };
+        cells = [at, to];
+        say = "Vântul bate spre " + w.d + ". " + cap(who) + " " + sqName(at) + " → " + sqName(to) + ".";
+      }
+
+    } else if (h.kind === "revive") {
+      M.pick = { hzId: "revive", side: side, stage: "choose" };
+      M.phase = "pick";
+      say = sideName(side) + " alege piesa care se întoarce.";
+    }
+
+    M.fx = { id: h.id, cells: cells, side: side, key: M.log.length + "." + h.id + "." + at };
+    stampLog({ hazard: h.id, hazardRo: h.ro });
+    L.say = say;
+    announce(M.fx);
+
+    if (h.kind === "revive") { pushMatch(); return; }
+    endTurn();
+  }
+
+  function stampLog(extra) {
+    if (!M.log.length) return;
+    var log = M.log.slice(), last = {}, k;
+    for (k in log[log.length - 1]) last[k] = log[log.length - 1][k];
+    for (k in extra) last[k] = extra[k];
+    log[log.length - 1] = last;
+    M.log = log;
+  }
+
+  function applyRevive(i) {
+    var pk = M.pick;
+    if (!pk) return;
+    if (pk.stage === "choose") return;
+    if (M.board[i]) { L.say = "Căsuța e ocupată. Alege una liberă."; return render(); }
+    var b = M.board.slice();
+    b[i] = { t: pk.t, c: pk.c };
+    M.board = b;
+    M.fallen = (M.fallen || []).filter(function (x, k) { return k !== pk.at; });
+    M.fx = { id: "revive", cells: [i], side: pk.side, key: M.log.length + ".revive." + i };
+    L.fxKey = M.fx.key; L.fxOn = true;
+    setTimeout(function () { L.fxOn = false; render(); }, 1900);
+    M.pick = null;
+    L.modal = null;
+    L.say = cap(PDEF[pk.t]) + " s-a întors pe " + sqName(i) + ".";
+    endTurn();
+  }
+
+  function resetHazards() {
+    M.hz = []; M.pick = null; M.fx = null; M.fade = null;
+    if (M.phase === "pick") M.phase = "move";
+    L.reveal = null; L.modal = null; L.confirmReset = false; L.fxOn = false;
+    L.say = "Tot ce era în joc a fost șters.";
+    pushMatch();
+  }
+
+  // deliberately tucked away: force one, for testing a specific hazard
+  function forceHazard(h) {
+    var at = M.lastMove ? M.lastMove.to : 28;
+    if ((M.spent || []).indexOf(at) >= 0) M.spent = M.spent.filter(function (x) { return x !== at; });
+    L.modal = null; L.forceOpen = false;
+    fireHazard(h, at);
+  }
+
+  // ───────── moves ─────────
+  function tapSquare(i) {
+    L.dbErr = "";
+
+    if (M.phase === "pick") {
+      if (!myPick()) { L.say = sideName(M.pick.side) + " alege. Așteaptă."; return render(); }
+      if (M.pick.stage === "place") return applyRevive(i);
+      L.modal = "revive"; return render();
+    }
+
+    if (!myTurn()) { L.say = "E rândul lui " + sideName(M.turn) + ", pe celălalt telefon."; return render(); }
+
+    var p = M.board[i];
+
+    if (L.sel === null) {
+      if (!p) { L.say = "Nu e nimic pe " + sqName(i) + "."; return render(); }
+      if (p.c !== M.turn && !L.override) { L.say = "Aceea e a lui " + sideName(p.c) + ". " + sideName(M.turn) + " mută."; return render(); }
+      if (stuckSquares()[i] && !L.override) { L.say = "Piesa e împotmolită. Nu se poate mișca."; return render(); }
+      L.sel = i; L.say = ""; return render();
+    }
+
+    if (L.sel === i) { L.sel = null; L.say = ""; return render(); }
+
+    var mover = M.board[L.sel];
+    if (!mover) { L.sel = null; return render(); }
+    if (p && p.c === mover.c && !L.override) { L.sel = i; L.say = ""; return render(); }
+
+    if (!L.override && !reach(M.board, L.sel)[i]) {
+      if (barrierSet()[i]) L.say = "Căsuța e sub apă.";
+      else if (mover.t === "n" && hasHz("frost")) L.say = "Calul e pe jos până trece gerul — merge ca un pion.";
+      else L.say = cap(PDEF[mover.t]) + " nu poate ajunge pe " + sqName(i) + ". Folosește „Fără reguli” dacă o carte permite.";
+      return render();
+    }
+
+    var lastRank = mover.c === "w" ? 0 : 7;
+    if (mover.t === "p" && Math.floor(i / 8) === lastRank) {
+      L.pendingPromo = { from: L.sel, to: i }; L.modal = "promo"; L.sel = null; L.say = "";
+      return render();
+    }
+    applyMove(L.sel, i, null);
+  }
+
+  function applyMove(from, to, promoteTo) {
+    var mover = M.board[from], target = M.board[to];
+    var board = M.board.slice();
+    board[to] = promoteTo ? { t: promoteTo, c: mover.c } : mover;
+    board[from] = null;
+
+    var san = PLETTER[mover.t] + sqName(from) + (target ? "×" : "–") + sqName(to);
+    if (promoteTo) san += "=" + PLETTER[promoteTo];
+
+    M.board = board;
+    if (target) M.fallen = (M.fallen || []).concat([{ t: target.t, c: target.c }]);
+    M.log = M.log.concat([{
+      id: M.nextId, ply: M.log.length + 1, no: M.moveNo, side: M.turn, san: san,
+      from: sqName(from), to: sqName(to), piece: PNAME[mover.t],
+      captured: target ? PNAME[target.t] : null,
+      promotedTo: promoteTo ? PNAME[promoteTo] : null,
+      override: !!L.override, hazard: null, hazardRo: null,
+      inPlay: (M.hz || []).map(function (e) { return e.hzId; }),
+      at: Date.now() - (M.startedAt || Date.now())
+    }]);
+    M.lastMove = { from: from, to: to };
+    M.nextId += 1;
+
+    L.sel = null; L.override = false; L.say = ""; L.pendingPromo = null; L.modal = null;
+
+    // the roll happens here and nowhere else
+    var h = (Math.random() < hazardChance()) ? drawHazard(to) : null;
+    if (h) return fireHazard(h, to);
+    endTurn();
+  }
+
+  function endTurn() {
+    var kept = [], gone = [], safe = [];
+    (M.hz || []).forEach(function (e) {
+      if (e.born === M.log.length) { kept.push(e); return; }   // it only just arrived
+      var left = e.left - 1;
+      if (left > 0) { var n = {}, k; for (k in e) n[k] = e[k]; n.left = left; kept.push(n); }
+      else {
+        // the hazard fades out, and from then on those squares are safe
+        var cells = e.cells || (typeof e.square === "number" ? [e.square] : []);
+        if (cells.length) gone.push({ hzId: e.hzId, cells: cells });
+        cells.forEach(function (c) { if (safe.indexOf(c) < 0) safe.push(c); });
+      }
+    });
+    M.hz = kept;
+    if (gone.length) {
+      M.fade = { items: gone, key: M.log.length + ".fade" };
+      M.spent = (M.spent || []).concat(safe.filter(function (c) { return (M.spent || []).indexOf(c) < 0; }));
+    } else M.fade = null;
+
+    M.phase = "move";
+    M.turn = M.turn === "w" ? "b" : "w";
+    if (M.log.length && M.log[M.log.length - 1].side === "b") M.moveNo += 1;
+    L.sel = null;
+    pushMatch();
+  }
+
+  function undoLast() {
+    if (!M.log.length) return;
+    var keep = M.log.slice(0, M.log.length - 1);
+    var removed = M.log[M.log.length - 1];
+    var board = startBoard(), fallen = [];
+    keep.forEach(function (m) {
+      var fi = idxOf(m.from), ti = idxOf(m.to), mv = board[fi];
+      if (!mv) return;
+      if (board[ti]) fallen.push({ t: board[ti].t, c: board[ti].c });
+      board[ti] = m.promotedTo ? { t: typeOf(m.promotedTo), c: mv.c } : mv;
+      board[fi] = null;
+    });
+    var last = keep.length ? keep[keep.length - 1] : null;
+    M.board = board; M.log = keep; M.fallen = fallen;
+    M.lastMove = last ? { from: idxOf(last.from), to: idxOf(last.to) } : null;
+    // an undone move takes its hazard with it
+    M.hz = []; M.pick = null; M.fx = null; M.fade = null;
+    M.spent = []; M.used = []; M.lastHz = 0;
+    keep.forEach(function (m) { if (m.hazard) { M.spent.push(idxOf(m.to)); M.lastHz = m.ply; if (HZ[m.hazard] && HZ[m.hazard].once) M.used.push(m.hazard); } });
+    if (M.phase === "move") { M.turn = removed.side; M.moveNo = removed.no; }
+    M.phase = "move";
+    L.sel = null; L.override = false;
+    L.say = "Ultima mutare a fost anulată. Ce a declanșat s-a dus cu ea.";
+    pushMatch();
+  }
+
+  // ───────── export ─────────
+  function exportText() {
+    if (L.exportFmt === "json") {
+      return JSON.stringify({
+        joc: "Șah: Originile", sesiune: M.session, cod: L.code || null,
+        alb: M.white, negru: M.black, durata: clockText(),
+        mutari: M.log, inJoc: M.hz, cazute: M.fallen,
+        casuteConsumate: (M.spent || []).map(sqName)
+      }, null, 2);
+    }
+    var A = [];
+    A.push("ȘAH: ORIGINILE — JURNAL DE TEST"); A.push("");
+    A.push("Sesiune  " + M.session);
+    if (L.code) A.push("Cod      " + L.code);
+    A.push("Alb      " + sideName("w"));
+    A.push("Negru    " + sideName("b"));
+    A.push("Durată   " + clockText());
+    A.push("Mutări   " + M.log.length);
+    A.push(""); A.push("  #  CINE  MUTARE      S-A ÎNTÂMPLAT");
+    A.push("  " + new Array(52).join("─"));
+    M.log.forEach(function (m) {
+      var n = String(m.no); while (n.length < 3) n = " " + n;
+      var s = m.san; while (s.length < 11) s += " ";
+      var tag = (m.override ? "FĂRĂ REGULI " : "") + (m.hazardRo ? m.hazardRo.toUpperCase() : "");
+      A.push(("  " + n + "  " + (m.side === "w" ? "A " : " N") + "   " + s + " " + tag).replace(/\s+$/, ""));
+    });
+    if ((M.hz || []).length) {
+      A.push(""); A.push("ÎNCĂ ÎN JOC");
+      M.hz.forEach(function (e) {
+        var h = HZ[e.hzId];
+        A.push("  " + (h ? h.ro : e.hzId) + "  ·  " + plural(e.left, "mutare", "mutări") + " rămase");
+      });
+    }
+    var sp = (M.spent || []);
+    if (sp.length) { A.push(""); A.push("CĂSUȚE CONSUMATE (nu mai declanșează nimic)"); A.push("  " + sp.map(sqName).sort().join("  ")); }
+    return A.join("\n");
+  }
+
+  function doCopy(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () {
+        L.copied = "yes"; render(); setTimeout(function () { L.copied = ""; render(); }, 2000);
+      }, function () { L.copied = "manual"; render(); });
+    } else { L.copied = "manual"; render(); }
+  }
+
+  // ───────── DOM ─────────
+  function el(tag, attrs, kids) {
+    var n = document.createElement(tag), k;
+    if (attrs) for (k in attrs) {
+      if (k === "class") n.className = attrs[k];
+      else if (k === "text") n.textContent = attrs[k];
+      else if (k.slice(0, 2) === "on") n.addEventListener(k.slice(2), attrs[k]);
+      else if (attrs[k] === true) n.setAttribute(k, "");
+      else if (attrs[k] !== false && attrs[k] != null) n.setAttribute(k, attrs[k]);
+    }
+    if (kids) kids.forEach(function (c) { if (c) n.appendChild(c); });
+    return n;
+  }
+  function t(tag, cls, s) { return el(tag, { class: cls, text: s }); }
+
+  // ───────── start ─────────
+  function screenStart() {
+    var saved = loadSolo();
+    var p = el("div", { class: "page" });
+
+    p.appendChild(t("div", "brandmark", "ȘAHȘAH"));
+    p.appendChild(el("h1", { class: "t-large voice", style: "margin:14px 0 0", text: "Șah: Originile" }));
+    p.appendChild(t("p", "t-body", "Jucați pe tablă. După fiecare mutare o atingeți aici, iar consola vă spune ce s-a întâmplat. Nimic nu e pe tablă de la început — se declanșează când calci pe el."));
+
+    var lab = el("label", { class: "t-cap caps", for: "f-session", text: "Sesiune", style: "display:block;margin-bottom:7px" });
+    var inp = el("input", { class: "field", id: "f-session", type: "text", value: L.session, oninput: function (e) { L.session = e.target.value; } });
+    p.appendChild(el("div", {}, [lab, inp]));
+
+    p.appendChild(t("div", "t-cap caps", "Cum jucați?"));
+
+    var opts = el("div", { class: "stack", style: "gap:10px" });
+    opts.appendChild(el("button", { class: "row", type: "button", onclick: startSolo }, [
+      t("span", "lead t-title2", "▢"),
+      el("span", { class: "mid" }, [t("span", "t-head", "Un telefon, între voi"), t("span", "t-foot", "Stă lângă tablă și atingeți amândoi în el.")]),
+      t("span", "chev", "›")
+    ]));
+    opts.appendChild(el("button", { class: "row", type: "button", onclick: function () { L.screen = "pairHost"; L.mode = "host"; render(); } }, [
+      t("span", "lead t-title2", "▣"),
+      el("span", { class: "mid" }, [t("span", "t-head", "Două telefoane — pornește"), t("span", "t-foot", "Primești patru litere. Le scrie și celălalt și sunteți legați.")]),
+      t("span", "chev", "›")
+    ]));
+    opts.appendChild(el("button", { class: "row", type: "button", onclick: function () { L.screen = "pairGuest"; L.mode = "guest"; render(); } }, [
+      t("span", "lead t-title2", "→"),
+      el("span", { class: "mid" }, [t("span", "t-head", "Două telefoane — intră cu un cod"), t("span", "t-foot", "A pornit deja și ți-a dat patru litere.")]),
+      t("span", "chev", "›")
+    ]));
+    p.appendChild(opts);
+
+    if (!Net.ready) {
+      p.appendChild(t("div", "t-foot", window.claude
+        ? "Jocul pe două telefoane cere ca amândoi să fiți conectați în același spațiu Claude."
+        : "Se caută serverul de meciuri… pe un singur telefon merge oricum."));
+    }
+
+    if (saved) {
+      p.appendChild(el("button", {
+        class: "btn plain", type: "button", text: "Continuă · " + (saved.session || "ultimul meci"),
+        onclick: function () {
+          M = saved;
+          if (!M.hz) M.hz = []; if (!M.spent) M.spent = []; if (!M.used) M.used = [];
+          L.mode = "solo"; L.mySide = null; L.screen = "match"; render();
+        }
+      }));
+    }
+    return p;
+  }
+
+  function startSolo() {
+    M = freshMatch(); M.session = L.session;
+    M.white = { id: "local-w", name: "Alb" };
+    M.black = { id: "local-b", name: "Negru" };
+    M.startedAt = Date.now();
+    L.mode = "solo"; L.mySide = null; L.code = ""; L.screen = "match";
+    saveSolo(); render();
+  }
+
+  function screenPairHost() {
+    var p = el("div", { class: "page" });
+    p.appendChild(t("div", "t-cap caps", "Două telefoane · Pornire"));
+    p.appendChild(el("h1", { class: "t-title voice", style: "margin:10px 0 0", text: "Pornește un meci" }));
+    p.appendChild(t("p", "t-sub", "Alege-ți partea și numele. Codul vine imediat — celălalt jucător îl scrie la el în telefon."));
+
+    p.appendChild(el("div", {}, [
+      el("label", { class: "t-cap caps", for: "f-host-name", text: "Tu ești", style: "display:block;margin-bottom:7px" }),
+      el("input", { class: "field", id: "f-host-name", type: "text", value: L.myName, placeholder: "numele tău", oninput: function (e) { L.myName = e.target.value; } })
+    ]));
+
+    p.appendChild(t("div", "t-cap caps", "Partea ta"));
+    var sp = el("div", { class: "sides" });
+    [["w", "Alb", "#F6F0E0"], ["b", "Negru", "#141F29"]].forEach(function (o) {
+      sp.appendChild(el("button", {
+        type: "button", "aria-pressed": L.pickSide === o[0] ? "true" : "false",
+        onclick: function () { L.pickSide = o[0]; render(); }
+      }, [
+        el("span", { class: "g", style: "color:" + o[2] + ";text-shadow:" + (o[0] === "w" ? "0 1px 3px rgba(0,0,0,.7)" : "0 1px 2px rgba(246,240,224,.45)"), text: GLYPH.k }),
+        t("span", "t-foot", o[1])
+      ]));
+    });
+    p.appendChild(sp);
+
+    if (!Net.ready) p.appendChild(t("div", "callout t-sub", offlineNote()));
+    if (L.dbErr) p.appendChild(t("div", "callout t-sub", L.dbErr));
+
+    p.appendChild(el("button", { class: "btn", type: "button", disabled: !Net.ready || L.busy, text: L.busy ? "Se creează…" : "Creează meciul", onclick: createMatch }));
+    p.appendChild(el("button", { class: "btn plain", type: "button", text: "Înapoi", onclick: function () { L.screen = "start"; L.mode = "solo"; render(); } }));
+    return p;
+  }
+
+  function createMatch() {
+    if (!Net.ready || L.busy) return;
+    L.busy = true; L.dbErr = ""; render();
+    var code = newCode();
+    Net.get(code).then(function (existing) {
+      if (existing) code = newCode();
+      var m = freshMatch();
+      m.session = L.session; m.startedAt = Date.now();
+      var seat = { id: myId || deviceId(), name: (L.myName || "").trim() || (L.pickSide === "w" ? "Alb" : "Negru") };
+      if (L.pickSide === "w") m.white = seat; else m.black = seat;
+      return Net.put(code, m).then(function () {
+        M = m; L.code = code; L.mySide = L.pickSide; L.mode = "host";
+        L.screen = "waiting"; L.busy = false; watchMatch(code); render();
+      });
+    }).catch(function (e) {
+      L.busy = false;
+      var c = (e && (e.code || e.message)) || "necunoscută";
+      L.dbErr = (e && e.code === "quota_exceeded")
+        ? "Nu mai e loc pentru meciuri noi."
+        : "N-am putut porni meciul — " + c + ".";
+      render();
+    });
+  }
+
+  function screenPairGuest() {
+    var p = el("div", { class: "page" });
+    p.appendChild(t("div", "t-cap caps", "Două telefoane · Intrare"));
+    p.appendChild(el("h1", { class: "t-title voice", style: "margin:10px 0 0", text: "Intră într-un meci" }));
+    p.appendChild(t("p", "t-sub", "Scrie cele patru litere de pe celălalt telefon."));
+
+    var codeIn = el("input", {
+      class: "codefield", id: "f-code", type: "text", value: L.codeDraft, maxlength: "4",
+      autocapitalize: "characters", autocomplete: "off", spellcheck: "false",
+      inputmode: "text", "aria-label": "Codul meciului",
+      oninput: function (e) {
+        var v = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 4);
+        e.target.value = v;
+        if (v !== L.codeDraft) { L.codeDraft = v; render(); }   // butonul trebuie să se trezească
+      },
+      onkeydown: function (e) { if (e.key === "Enter") { e.preventDefault(); joinMatch(); } }
+    });
+    p.appendChild(codeIn);
+
+    p.appendChild(el("div", {}, [
+      el("label", { class: "t-cap caps", for: "f-guest-name", text: "Tu ești", style: "display:block;margin-bottom:7px" }),
+      el("input", { class: "field", id: "f-guest-name", type: "text", value: L.myName, placeholder: "numele tău", oninput: function (e) { L.myName = e.target.value; } })
+    ]));
+
+    if (!Net.ready) p.appendChild(t("div", "callout t-sub", offlineNote()));
+    if (L.dbErr) p.appendChild(t("div", "callout t-sub", L.dbErr));
+
+    p.appendChild(el("button", {
+      class: "btn", type: "button", disabled: !Net.ready || L.busy,
+      text: L.busy ? "Se intră…" : "Intră", onclick: joinMatch
+    }));
+    p.appendChild(el("button", { class: "btn plain", type: "button", text: "Înapoi", onclick: function () { L.screen = "start"; L.mode = "solo"; render(); } }));
+    return p;
+  }
+
+  function joinMatch() {
+    if (!Net.ready || L.busy) return;
+    if (L.codeDraft.length !== 4) { L.dbErr = "Codul are patru litere."; return render(); }
+    L.busy = true; L.dbErr = ""; render();
+
+    var code = L.codeDraft, me = myId || deviceId();
+
+    Net.get(code).then(function (m) {
+      if (!m) {
+        L.busy = false;
+        L.dbErr = "Nu există niciun meci cu codul " + code + ". Mai uită-te o dată pe celălalt telefon.";
+        return render();
+      }
+      if (!m.board) { L.busy = false; L.dbErr = "Meciul acela pare stricat. Porniți unul nou."; return render(); }
+      if (!m.hz) m.hz = [];
+      if (!m.spent) m.spent = [];
+      if (!m.used) m.used = [];
+      if (!m.fallen) m.fallen = [];
+
+      var seat = { id: me, name: (L.myName || "").trim() || "Jucător" }, side;
+      if (!m.white) side = "w";
+      else if (!m.black) side = "b";
+      else if (m.white.id === me) side = "w";
+      else if (m.black.id === me) side = "b";
+      else { L.busy = false; L.dbErr = "Meciul are deja doi jucători."; return render(); }
+
+      if (side === "w") m.white = seat; else m.black = seat;
+
+      return Net.put(code, m).then(function () {
+        M = m;
+        L.code = code; L.mySide = side; L.mode = "guest"; L.screen = "match";
+        L.busy = false; L.dbErr = "";
+        watchMatch(code); render();
+      });
+    }).catch(function (e) {
+      L.busy = false;
+      var c = (e && (e.code || e.message)) || "necunoscută";
+      if (c === "invalid_argument") L.dbErr = "Codul nu e valid.";
+      else if (c === "not_granted" || c === "capability_disabled") L.dbErr = "Telefonul acesta nu are voie în meciuri live.";
+      else L.dbErr = "N-am putut intra — " + c;
+      render();
+    });
+  }
+
+  function screenWaiting() {
+    var p = el("div", { class: "page" });
+    p.appendChild(t("div", "t-cap caps", "Aștept celălalt telefon"));
+    p.appendChild(el("h1", { class: "t-title voice", style: "margin:10px 0 0", text: "Codul tău" }));
+    var box = el("div", { class: "codecard" });
+    box.appendChild(t("div", "v", L.code));
+    box.appendChild(t("div", "t-cap caps", "Patru litere, pe celălalt telefon"));
+    p.appendChild(box);
+    p.appendChild(t("p", "t-sub", "El deschide același link, alege „Intră cu un cod” și scrie cele patru litere. Meciul începe în clipa aceea."));
+    p.appendChild(el("button", { class: "btn tinted", type: "button", text: L.copied === "yes" ? "Copiat" : "Copiază codul", onclick: function () { doCopy(L.code); } }));
+    p.appendChild(el("button", { class: "btn plain", type: "button", text: "Începe fără el", onclick: function () { L.screen = "match"; render(); } }));
+    if (L.dbErr) p.appendChild(t("div", "callout t-sub", L.dbErr));
+    return p;
+  }
+
+  // ───────── the match ─────────
+  function bandText() {
+    if (M.phase === "pick" && M.pick) {
+      if (myPick()) {
+        return {
+          title: "Înviere",
+          say: L.say || (M.pick.stage === "place" ? "Atinge o căsuță liberă." : "Alege piesa care se întoarce."),
+          meta: "", active: true, ov: false
+        };
+      }
+      return { title: "Înviere", say: sideName(M.pick.side) + " alege piesa care se întoarce.", meta: "", active: true, ov: false };
+    }
+    if (L.sel !== null && M.board[L.sel]) {
+      return {
+        title: cap(PNAME[M.board[L.sel].t]) + " pe " + sqName(L.sel),
+        say: L.say || (L.override ? "Fără reguli — atinge orice căsuță." : "Atinge unde a ajuns."),
+        meta: "Mutarea " + M.moveNo, active: false, ov: true
+      };
+    }
+    return {
+      title: sideName(M.turn) + " mută",
+      say: L.say || (myTurn() ? "Mută piesa pe tablă, apoi atinge-o aici." : "Aștept celălalt telefon."),
+      meta: "Mutarea " + M.moveNo, active: false, ov: false
+    };
+  }
+
+  var clockEl = null;
+
+  function screenMatch() {
+    var frag = document.createDocumentFragment();
+
+    var bar = el("div", { class: "topbar material" });
+    bar.appendChild(t("span", "brandmark", "ȘAHȘAH"));
+    bar.appendChild(t("span", "sess t-foot", M.session + (L.code ? " · " + L.code : "")));
+    if (L.mode !== "solo") {
+      var pill = el("span", { class: "pill" });
+      pill.appendChild(el("span", { class: "dot" + (L.linked ? " on" : "") }));
+      pill.appendChild(t("span", "t-cap2", L.linked ? "Legat" : "Singur"));
+      bar.appendChild(pill);
+    }
+    clockEl = el("span", { class: "num t-foot", text: clockText() });
+    bar.appendChild(clockEl);
+    frag.appendChild(bar);
+
+    var b = bandText();
+    var band = el("div", { class: "band" + (b.active ? " active" : "") });
+    var r1 = el("div", { class: "r1" });
+    r1.appendChild(el("span", { class: "turnmark", style: "background:" + (M.turn === "w" ? "var(--piece-w)" : "var(--piece-b)") }));
+    r1.appendChild(el("h2", { text: b.title }));
+    if (b.meta) r1.appendChild(t("span", "t-cap2", b.meta));
+    band.appendChild(r1);
+
+    var r2 = el("div", { class: "r2" });
+    r2.appendChild(t("span", "say" + (L.say ? " alert" : ""), b.say));
+    if (b.ov) r2.appendChild(el("button", {
+      class: "tag-btn" + (L.override ? " on" : ""), type: "button",
+      text: L.override ? "Reguli la loc" : "Fără reguli",
+      onclick: function () { L.override = !L.override; L.say = ""; render(); }
+    }));
+    band.appendChild(r2);
+    frag.appendChild(band);
+
+    if (L.dbErr) frag.appendChild(t("div", "callout t-sub", L.dbErr));
+
+    frag.appendChild(boardBlock());
+
+    var rail = el("div", { class: "rail" });
+    rail.appendChild(t("span", "t-cap2 caps", "În joc"));
+    var strip = el("div", { class: "strip" });
+    if (!(M.hz || []).length) strip.appendChild(t("span", "t-foot", "nimic în joc"));
+    (M.hz || []).forEach(function (e) {
+      var h = HZ[e.hzId];
+      strip.appendChild(el("div", {
+        class: "chipcard" + (e.left <= 1 ? " low" : ""),
+        "aria-label": (h ? h.ro : e.hzId) + ", " + plural(e.left, "mutare", "mutări") + " rămase"
+      }, [
+        t("span", "nm", (h ? h.mark + " " + h.ro : e.hzId)),
+        t("span", "lf", e.left + "↓")
+      ]));
+    });
+    rail.appendChild(strip);
+    frag.appendChild(rail);
+
+    frag.appendChild(logPane());
+
+    var dock = el("div", { class: "dock material" });
+    function dockBtn(icon, label, fn, off) {
+      return el("button", { type: "button", disabled: !!off, onclick: fn }, [t("span", "ic", icon), t("span", "", label)]);
+    }
+    dock.appendChild(dockBtn("↩", "Anulează", undoLast, !M.log.length));
+    dock.appendChild(dockBtn("◆", "Pericole", function () { L.modal = "hazards"; render(); }));
+    dock.appendChild(dockBtn("≡", "Meniu", function () { L.modal = "menu"; render(); }));
+    frag.appendChild(dock);
+
+    return frag;
+  }
+
+  function boardBlock() {
+    var wrap = el("div", { class: "boardzone" });
+    var flip = flipped();
+
+    var ranks = el("div", { class: "ranks" });
+    for (var q = 0; q < 8; q++) ranks.appendChild(t("div", "t-cap2", String(flip ? q + 1 : 8 - q)));
+    wrap.appendChild(ranks);
+
+    var col = el("div", { class: "boardcol" });
+    var grid = el("div", { class: "board" });
+    var dots = {};
+    if (L.hints && L.sel !== null && M.phase === "move" && !L.override) dots = reach(M.board, L.sel);
+    for (var n = 0; n < 64; n++) grid.appendChild(square(flip ? 63 - n : n, dots));
+    if (L.fxOn && M.fx && M.fx.id === "frost") grid.appendChild(el("div", { class: "frostveil" }));
+    col.appendChild(grid);
+
+    var files = el("div", { class: "files" });
+    for (var f = 0; f < 8; f++) files.appendChild(t("div", "t-cap2", "abcdefgh".charAt(flip ? 7 - f : f)));
+    col.appendChild(files);
+
+    wrap.appendChild(col);
+    return wrap;
+  }
+
+  function fxHas(i) {
+    return L.fxOn && M.fx && (M.fx.cells || []).indexOf(i) >= 0;
+  }
+  function fadingKind(i) {
+    if (!L.fadeOn || !M.fade) return null;
+    var out = null;
+    (M.fade.items || []).forEach(function (it) { if ((it.cells || []).indexOf(i) >= 0) out = it.hzId; });
+    return out;
+  }
+
+  function square(idx, dots) {
+    var r = Math.floor(idx / 8), f = idx % 8;
+    var light = (r + f) % 2 === 0;
+    var p = M.board[idx];
+    var hot = M.lastMove && (M.lastMove.from === idx || M.lastMove.to === idx);
+    var wall = barrierSet()[idx];
+    var stuck = stuckSquares()[idx];
+    var fading = fadingKind(idx);
+    var fx = fxHas(idx);
+    var left = timerAt(idx);
+
+    var cls = "sq" + (light ? " lt" : "") + (hot ? " hot" : "") + (L.sel === idx ? " sel" : "")
+      + (fx ? " fx" : "") + (fading ? " fading" : "")
+      + (M.phase === "pick" && M.pick && M.pick.stage === "place" && !p ? " target" : "");
+
+    var aria = sqName(idx);
+    if (p) aria = (p.c === "w" ? "alb " : "negru ") + PNAME[p.t] + " pe " + aria;
+    if (wall) aria += ", sub apă";
+    if (stuck) aria += ", împotmolită";
+    if (left) aria += ", " + plural(left, "mutare", "mutări");
+
+    var kids = [];
+    if (wall || fading === "river") kids.push(el("span", { class: "water" }));
+    if (stuck || fading === "swamp") kids.push(el("span", { class: "mire" }));
+    if (fx && M.fx.id === "trench") kids.push(el("span", { class: "gash" }));
+    if (fx && M.fx.id === "wind") kids.push(el("span", { class: "gust" }));
+    if (p) {
+      var frozen = p.t === "n" && hasHz("frost");
+      var reborn = fx && M.fx.id === "revive";
+      kids.push(el("span", {
+        class: "pc " + p.c
+          + (M.phase === "move" && p.c !== M.turn ? " muted" : "")
+          + (stuck ? " stuck" : "") + (frozen ? " frozen" : "") + (reborn ? " reborn" : "")
+        , text: GLYPH[p.t]
+      }));
+    }
+    if (left) kids.push(el("span", { class: "ttimer" + (left <= 1 ? " last" : ""), text: String(left) }));
+    else if (!wall && !stuck && spentSet()[idx]) kids.push(el("span", { class: "safemark" }));
+    if (dots[idx]) kids.push(el("span", { class: "dotmark" }));
+
+    return el("button", { class: cls, type: "button", "aria-label": aria, onclick: function () { tapSquare(idx); } }, kids);
+  }
+
+  function logPane() {
+    var pane = el("div", { class: "pane" });
+    if (!M.log.length) {
+      pane.appendChild(t("div", "empty t-sub", "Încă nimic. Fiecare mutare apare aici, cea mai nouă prima."));
+      return pane;
+    }
+    for (var i = M.log.length - 1; i >= 0; i--) {
+      var m = M.log[i];
+      var row = el("div", { class: "mv" + (i === M.log.length - 1 ? " newest" : "") });
+      row.appendChild(t("div", "no", m.no + (m.side === "w" ? "." : "…")));
+      row.appendChild(t("div", "san", m.san));
+      var meta = el("div", { class: "meta" });
+      if (m.captured) meta.appendChild(t("span", "badge grey", "A LUAT " + m.captured.toUpperCase()));
+      if (m.override) meta.appendChild(t("span", "badge gold", "FĂRĂ REGULI"));
+      if (m.hazardRo) meta.appendChild(t("span", "badge red", m.hazardRo.toUpperCase()));
+      row.appendChild(meta);
+      pane.appendChild(row);
+    }
+    return pane;
+  }
+
+  // ───────── summary ─────────
+  function screenSummary() {
+    var frag = document.createDocumentFragment();
+    var head = el("div", { style: "flex:0 0 auto;padding:24px 20px 16px;padding-top:calc(24px + env(safe-area-inset-top,0px));border-bottom:1px solid var(--sep)" });
+    head.appendChild(t("div", "t-cap caps", "Jurnalul testului"));
+    head.appendChild(el("h2", { class: "t-title voice", style: "margin:8px 0 0", text: M.session }));
+    var fired = 0;
+    M.log.forEach(function (m) { if (m.hazard) fired++; });
+    var stats = el("div", { style: "display:flex;gap:26px;margin-top:14px" });
+    [["Mutări", String(M.log.length), "var(--fg)"], ["Durată", clockText(), "var(--fg)"], ["Declanșate", String(fired), "var(--accent)"]].forEach(function (s) {
+      stats.appendChild(el("div", {}, [t("div", "t-cap2 caps", s[0]), el("div", { class: "num t-title2", style: "color:" + s[2] + ";margin-top:2px", text: s[1] })]));
+    });
+    head.appendChild(stats);
+    frag.appendChild(head);
+
+    var pane = el("div", { class: "pane" });
+    var pre = el("pre", {
+      style: "margin:0;padding:16px;white-space:pre-wrap;word-break:break-word;font-family:var(--num);font-size:12px;line-height:1.5;color:var(--fg-2)",
+      text: exportText()
+    });
+    pane.appendChild(pre);
+    frag.appendChild(pane);
+
+    var pair = el("div", { style: "flex:0 0 auto;padding:14px 20px;padding-bottom:calc(18px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--sep);display:flex;flex-direction:column;gap:10px" });
+    var seg = el("div", { style: "display:flex;gap:8px" });
+    [["text", "Text"], ["json", "JSON"]].forEach(function (s) {
+      seg.appendChild(el("button", {
+        class: "btn " + (L.exportFmt === s[0] ? "tinted" : "plain"), type: "button",
+        text: s[1], onclick: function () { L.exportFmt = s[0]; L.copied = ""; render(); }
+      }));
+    });
+    pair.appendChild(seg);
+    pair.appendChild(el("button", {
+      class: "btn", type: "button",
+      text: L.copied === "yes" ? "Copiat" : L.copied === "manual" ? "Selectează textul de mai sus" : "Copiază jurnalul",
+      onclick: function () { doCopy(exportText()); }
+    }));
+    pair.appendChild(el("button", { class: "btn plain", type: "button", text: "Înapoi", onclick: function () { L.screen = "match"; render(); } }));
+    pair.appendChild(el("button", { class: "btn plain", type: "button", text: "Meci nou", onclick: function () { L.screen = "start"; L.mode = "solo"; L.mySide = null; L.code = ""; render(); } }));
+    frag.appendChild(pair);
+    return frag;
+  }
+
+  // ───────── sheets ─────────
+  function sheetHazards() {
+    var s = el("div", { class: "sheet" });
+    s.appendChild(el("div", { class: "grabber" }));
+    s.appendChild(t("div", "t-title2 voice", "Ce se poate întâmpla"));
+    s.appendChild(t("p", "t-sub", "Nimic din toate astea nu e pe tablă la început și nimeni nu le alege. Se trag la sorți când o piesă se oprește pe o căsuță. O căsuță care a declanșat ceva nu mai declanșează niciodată."));
+
+    var live = (M.hz || []);
+    if (live.length) {
+      s.appendChild(t("div", "t-cap caps", "Acum în joc"));
+      live.forEach(function (e) {
+        var h = HZ[e.hzId];
+        s.appendChild(el("div", { class: "menurow" }, [
+          el("span", { class: "ic", style: "color:" + (h ? h.color : "var(--accent)"), text: h ? h.mark : "◆" }),
+          el("span", { class: "mid" }, [
+            t("span", "t-head", h ? h.ro : e.hzId),
+            t("span", "t-foot", plural(e.left, "mutare rămasă", "mutări rămase"))
+          ])
+        ]));
+      });
+    }
+
+    s.appendChild(t("div", "t-cap caps", "Tot ce există"));
+    var deck = el("div", { class: "deck" });
+    HAZARDS.forEach(function (h) {
+      deck.appendChild(el("div", { class: "deckcard" }, [
+        el("span", { class: "cr", style: "color:" + h.color }, [document.createTextNode(h.mark + "  " + h.tier + " · " + h.w + "%")]),
+        t("span", "cn", h.ro),
+        t("span", "cd", h.text),
+        h.dur ? t("span", "t-cap2", "ține " + plural(h.dur, "mutare", "mutări")) : t("span", "t-cap2", "se întâmplă pe loc")
+      ]));
+    });
+    s.appendChild(deck);
+    s.appendChild(el("button", { class: "btn plain", type: "button", text: "Închide", onclick: function () { L.modal = null; render(); } }));
+    return s;
+  }
+
+  function sheetRevive() {
+    var s = el("div", { class: "sheet" });
+    s.appendChild(el("div", { class: "grabber" }));
+    s.appendChild(t("div", "t-title2 voice", "Înviere"));
+    if (!M.fallen || !M.fallen.length) {
+      s.appendChild(t("p", "t-sub", "N-a căzut încă nimic."));
+      s.appendChild(el("button", {
+        class: "btn plain", type: "button", text: "Închide",
+        onclick: function () { M.pick = null; L.modal = null; endTurn(); }
+      }));
+      return s;
+    }
+    s.appendChild(t("p", "t-sub", "Alege piesa care se întoarce, apoi atinge o căsuță liberă de pe tablă."));
+    var grid = el("div", { style: "display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px" });
+    M.fallen.forEach(function (fp, k) {
+      grid.appendChild(el("button", {
+        class: "deckcard", type: "button", style: "min-height:84px;align-items:center;justify-content:center",
+        "aria-label": "învie " + (fp.c === "w" ? "albul " : "negrul ") + PNAME[fp.t],
+        onclick: function () {
+          M.pick = { hzId: "revive", side: M.pick.side, stage: "place", t: fp.t, c: fp.c, at: k };
+          L.modal = null; L.say = "Atinge o căsuță liberă pentru " + PDEF[fp.t] + ".";
+          pushMatch();
+        }
+      }, [
+        el("span", { style: "font-size:28px;line-height:1;color:" + (fp.c === "w" ? "var(--piece-w)" : "var(--piece-b)") + ";text-shadow:" + (fp.c === "w" ? "0 1px 3px rgba(0,0,0,.7)" : "0 1px 2px rgba(246,240,224,.4)"), text: GLYPH[fp.t] }),
+        t("span", "t-cap2", PNAME[fp.t])
+      ]));
+    });
+    s.appendChild(grid);
+    return s;
+  }
+
+  function sheetMenu() {
+    var s = el("div", { class: "sheet" });
+    s.appendChild(el("div", { class: "grabber" }));
+    s.appendChild(t("div", "t-title2 voice", "Meniu"));
+
+    s.appendChild(el("button", { class: "menurow", type: "button", onclick: function () { L.hints = !L.hints; render(); } }, [
+      el("span", { class: "ic", text: "◌" }),
+      el("span", { class: "mid" }, [t("span", "t-head", "Arată unde poate merge"), t("span", "t-foot", "Punctele de pe tablă când ridici o piesă.")]),
+      el("span", { class: "switch" + (L.hints ? " on" : "") }, [el("i", {})])
+    ]));
+
+    s.appendChild(el("button", {
+      class: "menurow", type: "button",
+      onclick: function () { M.turn = M.turn === "w" ? "b" : "w"; M.phase = "move"; M.pick = null; L.modal = null; L.sel = null; L.say = ""; pushMatch(); }
+    }, [
+      el("span", { class: "ic", text: "⇄" }),
+      el("span", { class: "mid" }, [t("span", "t-head", "Treci rândul"), t("span", "t-foot", "Dacă ați mutat pe tablă fără să treceți pe aici.")])
+    ]));
+
+    s.appendChild(el("button", {
+      class: "btn tinted", type: "button", style: "margin-top:18px", text: "Încheie și citește jurnalul",
+      onclick: function () { L.screen = "summary"; L.modal = null; render(); }
+    }));
+
+    // tucked away on purpose — for when something leaves the board in a bad state
+    s.appendChild(el("div", { style: "margin-top:26px;padding-top:16px;border-top:1px solid var(--sep)" }, [
+      t("div", "t-cap2 caps", "Dacă s-a stricat ceva")
+    ]));
+
+    if (!L.confirmReset) {
+      s.appendChild(el("button", {
+        class: "menurow", type: "button", style: "margin-top:10px",
+        onclick: function () { L.confirmReset = true; render(); }
+      }, [
+        el("span", { class: "ic", style: "color:var(--red)", text: "↻" }),
+        el("span", { class: "mid" }, [
+          t("span", "t-head", "Resetează tot ce e în joc"),
+          t("span", "t-foot", "Șterge apa, mlaștina, gerul — tot. Mutările rămân.")
+        ])
+      ]));
+    } else {
+      s.appendChild(t("p", "t-sub", "Asta șterge tot ce e activ pe tablă. Meciul și mutările rămân neatinse."));
+      s.appendChild(el("button", { class: "btn destructive", type: "button", text: "Da, șterge tot", onclick: resetHazards }));
+      s.appendChild(el("button", { class: "btn plain", type: "button", text: "Lasă-le", onclick: function () { L.confirmReset = false; render(); } }));
+    }
+
+    if (!L.forceOpen) {
+      s.appendChild(el("button", {
+        class: "menurow", type: "button", style: "margin-top:10px",
+        onclick: function () { L.forceOpen = true; render(); }
+      }, [
+        el("span", { class: "ic", text: "⚑" }),
+        el("span", { class: "mid" }, [
+          t("span", "t-head", "Forțează un eveniment"),
+          t("span", "t-foot", "Pentru test. Se declanșează pe ultima căsuță jucată.")
+        ])
+      ]));
+    } else {
+      var g = el("div", { style: "display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px" });
+      HAZARDS.forEach(function (h) {
+        g.appendChild(el("button", {
+          class: "deckcard", type: "button", style: "min-height:auto;padding:12px 10px",
+          onclick: function () { forceHazard(h); }
+        }, [
+          el("span", { class: "cr", style: "color:" + h.color }, [document.createTextNode(h.mark + "  " + h.tier)]),
+          t("span", "cn", h.ro)
+        ]));
+      });
+      s.appendChild(g);
+      s.appendChild(el("button", { class: "btn plain", type: "button", text: "Închide", onclick: function () { L.forceOpen = false; render(); } }));
+    }
+    return s;
+  }
+
+  function sheetPromo() {
+    var s = el("div", { class: "sheet" });
+    s.appendChild(el("div", { class: "grabber" }));
+    s.appendChild(t("div", "t-title2 voice", "Pionul a ajuns la capăt"));
+    s.appendChild(t("p", "t-sub", "Ce a devenit?"));
+    var grid = el("div", { style: "display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px" });
+    ["q", "r", "b", "n", "p"].forEach(function (pt) {
+      grid.appendChild(el("button", {
+        class: "deckcard", type: "button", style: "min-height:82px;align-items:center;justify-content:center",
+        "aria-label": pt === "p" ? "rămâne pion" : "devine " + PNAME[pt],
+        onclick: function () {
+          var pp = L.pendingPromo;
+          if (!pp) { L.modal = null; return render(); }
+          applyMove(pp.from, pp.to, pt === "p" ? null : pt);
+        }
+      }, [
+        el("span", { style: "font-size:26px;line-height:1;color:" + (M.turn === "w" ? "var(--piece-w)" : "var(--piece-b)") + ";text-shadow:" + (M.turn === "w" ? "0 1px 3px rgba(0,0,0,.7)" : "0 1px 2px rgba(246,240,224,.4)"), text: GLYPH[pt] }),
+        t("span", "t-cap2", pt === "p" ? "rămâne" : PNAME[pt])
+      ]));
+    });
+    s.appendChild(grid);
+    return s;
+  }
+
+  // ───────── render ─────────
+  var app = document.getElementById("app");
+  var scrim = null, revealEl = null;
+
+  function render() {
+    clockEl = null;
+
+    // a hazard that has just expired gets to wash off the board once
+    if (M.fade && M.fade.key !== L.fadeKey) {
+      L.fadeKey = M.fade.key; L.fadeOn = true;
+      setTimeout(function () { L.fadeOn = false; render(); }, 750);
+    }
+    // the picker's sheet opens itself
+    if (M.phase === "pick" && M.pick && M.pick.stage === "choose" && myPick() && !L.modal && !L.reveal) L.modal = "revive";
+
+    var active = document.activeElement;
+    var aid = active && active.id ? active.id : null;
+    var caret = (active && typeof active.selectionStart === "number") ? active.selectionStart : null;
+
+    app.textContent = "";
+    if (L.screen === "start") app.appendChild(screenStart());
+    else if (L.screen === "pairHost") app.appendChild(screenPairHost());
+    else if (L.screen === "pairGuest") app.appendChild(screenPairGuest());
+    else if (L.screen === "waiting") app.appendChild(screenWaiting());
+    else if (L.screen === "summary") app.appendChild(screenSummary());
+    else app.appendChild(screenMatch());
+
+    if (scrim) { scrim.remove(); scrim = null; }
+    if (L.modal) {
+      scrim = el("div", { class: "scrim" });
+      scrim.appendChild(el("button", {
+        class: "dismiss", type: "button", "aria-label": "Închide",
+        onclick: function () {
+          if (L.modal === "revive") return;            // the turn is owed a choice
+          L.modal = null; L.pendingPromo = null; L.confirmReset = false; L.forceOpen = false; render();
+        }
+      }));
+      scrim.appendChild(
+        L.modal === "hazards" ? sheetHazards()
+          : L.modal === "menu" ? sheetMenu()
+            : L.modal === "promo" ? sheetPromo()
+              : sheetRevive()
+      );
+      document.body.appendChild(scrim);
+    }
+
+    if (revealEl) { revealEl.remove(); revealEl = null; }
+    if (L.reveal) {
+      var h = L.reveal.hz;
+      revealEl = el("div", { class: "reveal", onclick: function () { L.reveal = null; render(); } });
+      var card = el("div", { class: "bigcard" + (L.reveal.light ? " light" : "") });
+      card.appendChild(el("div", { class: "mark", text: h.mark }));
+      card.appendChild(t("div", "ro", h.tier));
+      card.appendChild(t("div", "en", h.ro));
+      card.appendChild(t("div", "txt", h.text));
+      card.appendChild(t("div", "dur", h.dur ? plural(h.dur, "MUTARE", "MUTĂRI") : "PE LOC"));
+      revealEl.appendChild(card);
+      document.body.appendChild(revealEl);
+    }
+
+    if (aid) {
+      var again = document.getElementById(aid);
+      if (again && again !== document.activeElement) {
+        again.focus();
+        if (caret != null && typeof again.setSelectionRange === "function") {
+          try { again.setSelectionRange(caret, caret); } catch (e) { }
+        }
+      }
+    }
+  }
+
+  setInterval(function () {
+    L.now = Date.now();
+    if (clockEl) clockEl.textContent = clockText();
+  }, 1000);
+
+  boot();
+  render();
+})();
+</script>
