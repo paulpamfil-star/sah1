@@ -8,27 +8,32 @@ prototype has neither. It is built for the stage before that: a wooden board wit
 the map printed over it, a phone standing next to it, and every move entered by
 hand.
 
-**On Claude (one phone or two):** https://claude.ai/artifact/WgKas38sCShyM9tB1bfT6B
-**On GitHub Pages (one phone):** https://paulpamfil-star.github.io/sah1/ — after the one-time switch below
+**Play:** https://paulpamfil-star.github.io/sah1/ — public, no account, one phone or two
+**On Claude:** https://claude.ai/artifact/WgKas38sCShyM9tB1bfT6B — same app, Claude's own store
 **Design canvas (reference boards):** https://claude.ai/artifact/J12hreb7yw5R3K8VjcDCpG
 
-### Turning the GitHub Pages link on
+One `docs/index.html` serves both, with two backends behind one seam. Inside a
+Claude artifact it uses the artifact's own document store. Served as a plain page
+it uses Supabase. Nothing else in the app knows the difference.
 
-One setting, once, and only a repository admin can do it — a workflow token is
-refused (`Resource not accessible by integration`).
+The public link is the one to share: no Claude account, no workspace, anyone with
+the URL can be the second phone.
 
-> **Settings → Pages → Build and deployment → Source: _Deploy from a branch_**
-> → branch `claude/cloud-game-prototype-xaag5p`, folder `/docs` → Save.
+### Setting up the Supabase side
 
-The site appears at the link above a minute or so later and refreshes on every
-push. `.github/workflows/pages.yml` is there for the day this merges to `main`;
-it needs no setup of its own once Pages is on.
+Run [`supabase/schema.sql`](supabase/schema.sql) once in the Supabase dashboard —
+SQL Editor → New query → paste → Run. It creates the `matches` table, turns on row
+level security with the playtest policies, and adds the table to the realtime
+publication.
 
-The same `docs/index.html` is behind both links. The GitHub Pages copy is a plain
-static page with no backend, so the two-phone code pairing is inert there and the
-app says so on its opening screen; everything else — the board, the deck, terrain,
-the log, export — works exactly the same. Live pairing needs the shared document
-store the Claude build runs on, or a backend of your own.
+The project URL and publishable key sit in `docs/index.html` in plain sight. That
+is what a publishable key is for; it ships in client code by design and RLS is
+what actually guards the rows. The **secret** key never goes anywhere near this
+repository.
+
+Read the policy comments in the SQL before you ship anything: as written, anyone
+with the site's key can read or write any match. Fine for a playtest, not fine for
+a product.
 
 ---
 

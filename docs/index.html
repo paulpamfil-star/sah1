@@ -498,8 +498,19 @@
   }
   var M = freshMatch();
 
-  // ───────── capabilities ─────────
-  var db = null, room = null, myId = null, matchRef = null, unsubDoc = null;
+  // ───────── the network ─────────
+  // Two backends behind one seam. Inside a Claude artifact the page uses the
+  // artifact's own store; served as a plain page (GitHub Pages) it uses
+  // Supabase. The publishable key is meant to ship in client code — row level
+  // security on the table is what actually guards the data.
+  var SUPA = {
+    url: "https://muqagbawjzudnxoqwhen.supabase.co",
+    key: "sb_publishable_NWOulDK-a9kak7lHNpebRA_HzNt9n_Q",
+    cdn: "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"
+  };
+
+  var Net = { kind: null, ready: false, sb: null, channel: null, ref: null, off: null };
+  var room = null, myId = null, myTag = null, lastSentRev = 0;
 
   // Snapshots from the store arrive FROZEN. This file runs in strict mode, so
   // writing to one throws — which is what silently broke joining. Everything
@@ -516,21 +527,57 @@
     } catch (e) { return "d" + Math.random().toString(36).slice(2, 12); }
   }
 
-  function bootCapabilities() {
-    if (!window.claude || !window.claude.use) { myId = deviceId(); return; }
-    window.claude.use("user")
-      .then(function (u) { return u ? u.id() : null; })
-      .then(function (id) { myId = id || deviceId(); })
-      .catch(function () { myId = deviceId(); });
-    window.claude.use("db").then(function (d) { db = d; render(); }).catch(function () { db = null; });
-    window.claude.use("room").then(function (r) {
-      room = r;
-      if (!r) return;
-      r.onPeers(function (ch) {
-        var linked = ch.peers.some(function (p) { return !p.isMe && p.kind === "viewer"; });
-        if (linked !== L.linked) { L.linked = linked; render(); }
-      }, function () { });
-    }).catch(function () { room = null; });
+  function loadScript(src) {
+    return new Promise(function (ok, no) {
+      var s = document.createElement("script");
+      s.src = src; s.async = true;
+      s.onload = function () { ok(); };
+      s.onerror = function () { no(new Error("could not load " + src)); };
+      document.head.appendChild(s);
+    });
+  }
+
+  function boot() {
+    myId = deviceId();
+    myTag = myId + "." + Math.random().toString(36).slice(2, 8);
+
+    if (window.claude && window.claude.use) {
+      window.claude.use("user")
+        .then(function (u) { return u ? u.id() : null; })
+        .then(function (id) { if (id) myId = id; })
+        .catch(function () { });
+      window.claude.use("db").then(function (d) {
+        if (d) { Net.sb = null; Net.db = d; Net.kind = "claude"; Net.ready = true; }
+        render();
+      }).catch(function () { render(); });
+      window.claude.use("room").then(function (r) {
+        room = r;
+        if (!r) return;
+        r.onPeers(function (ch) {
+          var linked = ch.peers.some(function (p) { return !p.isMe && p.kind === "viewer"; });
+          if (linked !== L.linked) { L.linked = linked; render(); }
+        }, function () { });
+      }).catch(function () { room = null; });
+      return;
+    }
+
+    if (!SUPA.url || SUPA.url.indexOf("http") !== 0) { render(); return; }
+    loadScript(SUPA.cdn).then(function () {
+      if (!window.supabase || !window.supabase.createClient) throw new Error("no client");
+      Net.sb = window.supabase.createClient(SUPA.url, SUPA.key);
+      Net.kind = "supabase"; Net.ready = true;
+      render();
+    }).catch(function () {
+      Net.kind = null; Net.ready = false;
+      L.dbErr = "Could not reach the match server. One-phone play still works.";
+      render();
+    });
+  }
+
+  // What to say when the live side is unavailable — it differs per backend.
+  function offlineNote() {
+    if (window.claude) return "Live matches are not available on this device. Both players need to be signed in to the same Claude workspace and opening this same link.";
+    return "Could not reach the match server. Check your connection — one-phone play works regardless.";
   }
 
   // ───────── persistence ─────────
@@ -548,25 +595,91 @@
     return s;
   }
 
+  // Read one match. Resolves null when there is no such code.
+  Net.get = function (code) {
+    if (Net.kind === "claude") {
+      return Net.db.doc("matches/" + code).get().then(function (s) {
+        return s.exists ? thaw(s.data()) : null;
+      });
+    }
+    return Net.sb.from("matches").select("state").eq("code", code).maybeSingle()
+      .then(function (r) {
+        if (r.error) throw r.error;
+        return r.data ? thaw(r.data.state) : null;
+      });
+  };
+
+  // Write the whole match. Every write carries a rising rev and the writer's
+  // tag, so a backend that echoes our own writes back can be told apart.
+  Net.put = function (code, state) {
+    state.rev = (state.rev || 0) + 1;
+    state.wby = myTag;
+    lastSentRev = state.rev;
+    if (Net.kind === "claude") return Net.db.doc("matches/" + code).set(state);
+    return Net.sb.from("matches")
+      .upsert({ code: code, state: state, updated_at: new Date().toISOString() })
+      .then(function (r) { if (r.error) throw r.error; });
+  };
+
+  Net.watch = function (code, onState, onErr) {
+    if (Net.off) { Net.off(); Net.off = null; }
+
+    if (Net.kind === "claude") {
+      var ref = Net.db.doc("matches/" + code);
+      Net.off = ref.onSnapshot(function (snap) {
+        if (!snap.exists) return;
+        if (snap.metadata && snap.metadata.hasPendingWrites) return;
+        var d = thaw(snap.data());
+        if (d && d.board) onState(d);
+      }, function (e) {
+        onErr(e.code === "not_granted"
+          ? "This device cannot join live matches."
+          : "The live connection dropped. Reload to reconnect.");
+      });
+      return;
+    }
+
+    var ch = Net.sb.channel("match-" + code, { config: { presence: { key: myTag } } });
+    ch.on("postgres_changes",
+      { event: "*", schema: "public", table: "matches", filter: "code=eq." + code },
+      function (payload) {
+        var row = payload && payload.new;
+        if (!row || !row.state) return;
+        var st = thaw(row.state);
+        if (!st || !st.board) return;
+        if (st.wby === myTag && st.rev === lastSentRev) return;   // our own echo
+        onState(st);
+      });
+    ch.on("presence", { event: "sync" }, function () {
+      var n = Object.keys(ch.presenceState() || {}).length;
+      var linked = n > 1;
+      if (linked !== L.linked) { L.linked = linked; render(); }
+    });
+    ch.subscribe(function (status) {
+      if (status === "SUBSCRIBED") { ch.track({ at: Date.now() }); }
+      else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+        onErr("The live connection dropped. Reload to reconnect.");
+      }
+    });
+    Net.channel = ch;
+    Net.off = function () { try { Net.sb.removeChannel(ch); } catch (e) { } };
+  };
+
   function pushMatch() {
     if (L.mode === "solo") { saveSolo(); render(); return Promise.resolve(); }
     render();
-    if (!matchRef) return Promise.resolve();
-    return matchRef.set(M).catch(function (e) {
-      L.dbErr = (e && e.code === "revoked") ? "Lost access to this match." : "That move did not save. Check the connection.";
+    if (!L.code || !Net.ready) return Promise.resolve();
+    return Net.put(L.code, M).catch(function (e) {
+      L.dbErr = (e && e.code === "revoked")
+        ? "Lost access to this match."
+        : "That move did not save. Check the connection.";
       render();
     });
   }
 
   function watchMatch(code) {
-    if (!db) return;
-    if (unsubDoc) { unsubDoc(); unsubDoc = null; }
-    matchRef = db.doc("matches/" + code);
-    unsubDoc = matchRef.onSnapshot(function (snap) {
-      if (!snap.exists) return;
-      var d = thaw(snap.data());
-      if (!d || !d.board) return;
-      if (snap.metadata && snap.metadata.hasPendingWrites) return;
+    if (!Net.ready) return;
+    Net.watch(code, function (d) {
       var hadCards = M.cards ? M.cards.length : 0;
       M = d;
       if (!M.barrier) M.barrier = [];
@@ -580,8 +693,8 @@
       }
       if (L.screen === "waiting" && M.white && M.black) L.screen = "match";
       render();
-    }, function (e) {
-      L.dbErr = e.code === "not_granted" ? "This device cannot join live matches." : "The live connection dropped. Reload to reconnect.";
+    }, function (msg) {
+      L.dbErr = msg;
       render();
     });
   }
@@ -914,7 +1027,7 @@
     if (noteTimer) clearTimeout(noteTimer);
     noteTimer = setTimeout(function () {
       noteTimer = null;
-      if (L.mode === "solo") saveSolo(); else if (matchRef) matchRef.set(M).catch(function () { });
+      if (L.mode === "solo") saveSolo(); else if (L.code && Net.ready) Net.put(L.code, M).catch(function () { });
     }, 600);
   }
 
@@ -1051,8 +1164,10 @@
     ]));
     p.appendChild(opts);
 
-    if (!db && !window.claude) {
-      p.appendChild(t("div", "t-foot", "This copy runs on its own — one phone only. Live two-phone pairing works on the Claude-hosted build."));
+    if (!Net.ready) {
+      p.appendChild(t("div", "t-foot", window.claude
+        ? "Two-phone play needs both of you signed in to the same Claude workspace."
+        : "Connecting to the match server… one phone works either way."));
     }
 
     if (saved) {
@@ -1097,31 +1212,34 @@
     });
     p.appendChild(sp);
 
-    if (!db) p.appendChild(t("div", "callout t-sub", "Live matches are not available on this device. Both players need to be signed in to the same Claude workspace and opening this same link. One-phone play still works."));
+    if (!Net.ready) p.appendChild(t("div", "callout t-sub", offlineNote()));
     if (L.dbErr) p.appendChild(t("div", "callout t-sub", L.dbErr));
 
-    p.appendChild(el("button", { class: "btn", type: "button", disabled: !db || L.busy, text: L.busy ? "Creating…" : "Create the match", onclick: createMatch }));
+    p.appendChild(el("button", { class: "btn", type: "button", disabled: !Net.ready || L.busy, text: L.busy ? "Creating…" : "Create the match", onclick: createMatch }));
     p.appendChild(el("button", { class: "btn plain", type: "button", text: "Back", onclick: function () { L.screen = "start"; L.mode = "solo"; render(); } }));
     return p;
   }
 
   function createMatch() {
-    if (!db || L.busy) return;
+    if (!Net.ready || L.busy) return;
     L.busy = true; L.dbErr = ""; render();
-    var code = newCode(), ref = db.doc("matches/" + code);
-    ref.get().then(function (snap) {
-      if (snap.exists) { code = newCode(); ref = db.doc("matches/" + code); }
+    var code = newCode();
+    Net.get(code).then(function (existing) {
+      if (existing) code = newCode();            // one retry is plenty at 900k codes
       var m = freshMatch();
       m.session = L.session; m.startedAt = Date.now();
       var seat = { id: myId || deviceId(), name: (L.myName || "").trim() || (L.pickSide === "w" ? "White" : "Black") };
       if (L.pickSide === "w") m.white = seat; else m.black = seat;
-      return ref.set(m).then(function () {
+      return Net.put(code, m).then(function () {
         M = m; L.code = code; L.mySide = L.pickSide; L.mode = "host";
         L.screen = "waiting"; L.busy = false; watchMatch(code); render();
       });
     }).catch(function (e) {
       L.busy = false;
-      L.dbErr = (e && e.code === "quota_exceeded") ? "The match store is full." : "Could not start a live match on this device.";
+      var c = (e && (e.code || e.message)) || "unknown";
+      L.dbErr = (e && e.code === "quota_exceeded")
+        ? "The match store is full."
+        : "Could not start a live match — " + c + ".";
       render();
     });
   }
@@ -1150,11 +1268,11 @@
       el("input", { class: "field", id: "f-guest-name", type: "text", value: L.myName, placeholder: "your name", oninput: function (e) { L.myName = e.target.value; } })
     ]));
 
-    if (!db) p.appendChild(t("div", "callout t-sub", "Live matches are not available on this device. Both players need to be signed in to the same Claude workspace and opening this same link."));
+    if (!Net.ready) p.appendChild(t("div", "callout t-sub", offlineNote()));
     if (L.dbErr) p.appendChild(t("div", "callout t-sub", L.dbErr));
 
     p.appendChild(el("button", {
-      class: "btn", type: "button", disabled: !db || L.busy,
+      class: "btn", type: "button", disabled: !Net.ready || L.busy,
       text: L.busy ? "Joining…" : "Join", onclick: joinMatch
     }));
     p.appendChild(el("button", { class: "btn plain", type: "button", text: "Back", onclick: function () { L.screen = "start"; L.mode = "solo"; render(); } }));
@@ -1162,66 +1280,44 @@
   }
 
   function joinMatch() {
-    if (!db || L.busy) return;
+    if (!Net.ready || L.busy) return;
     if (L.codeDraft.length !== 4) { L.dbErr = "The code is four letters."; return render(); }
     L.busy = true; L.dbErr = ""; render();
 
-    var code = L.codeDraft, ref = db.doc("matches/" + code), me = myId || deviceId();
+    var code = L.codeDraft, me = myId || deviceId();
 
-    // The lease only guards against two people typing the same code in the same
-    // second. Not every runtime serves it, so a refusal is not a reason to stop.
-    function lease() {
-      try {
-        return ref.acquire({ holder: me, ttlMs: 6000 })
-          .then(function (r) { return r; }, function () { return { acquired: true }; });
-      } catch (e) { return Promise.resolve({ acquired: true }); }
-    }
-
-    lease().then(function (res) {
-      if (res && res.acquired === false) {
+    Net.get(code).then(function (m) {
+      if (!m) {
         L.busy = false;
-        L.dbErr = "Someone else is joining right now. Try again in a moment.";
+        L.dbErr = "No match with the code " + code + ". Check the letters on the other phone.";
         return render();
       }
-      return ref.get().then(function (snap) {
-        if (!snap.exists) {
-          L.busy = false;
-          L.dbErr = "No match with the code " + code + ". Check the letters on the other phone.";
-          return render();
-        }
-        var m = thaw(snap.data());
-        if (!m || !m.board) { L.busy = false; L.dbErr = "That match looks damaged. Start a new one."; return render(); }
-        if (!m.barrier) m.barrier = [];
-        if (!m.fallen) m.fallen = [];
-        if (!m.cards) m.cards = [];
+      if (!m.board) { L.busy = false; L.dbErr = "That match looks damaged. Start a new one."; return render(); }
+      if (!m.barrier) m.barrier = [];
+      if (!m.fallen) m.fallen = [];
+      if (!m.cards) m.cards = [];
 
-        var seat = { id: me, name: (L.myName || "").trim() || "Player" }, side;
-        if (!m.white) side = "w";
-        else if (!m.black) side = "b";
-        else if (m.white.id === me) side = "w";
-        else if (m.black.id === me) side = "b";
-        else { L.busy = false; L.dbErr = "That match already has two players."; return render(); }
+      var seat = { id: me, name: (L.myName || "").trim() || "Player" }, side;
+      if (!m.white) side = "w";
+      else if (!m.black) side = "b";
+      else if (m.white.id === me) side = "w";
+      else if (m.black.id === me) side = "b";
+      else { L.busy = false; L.dbErr = "That match already has two players."; return render(); }
 
-        if (side === "w") m.white = seat; else m.black = seat;
+      if (side === "w") m.white = seat; else m.black = seat;
 
-        var patch = {};
-        patch[side === "w" ? "white" : "black"] = seat;
-
-        function seated() {
-          M = m;
-          L.code = code; L.mySide = side; L.mode = "guest"; L.screen = "match";
-          L.busy = false; L.terrainMode = false; L.dbErr = "";
-          watchMatch(code); render();
-        }
-        // update() merges; if this runtime will not merge, write the whole doc.
-        return ref.update(patch).then(seated, function () { return ref.set(m).then(seated); });
+      return Net.put(code, m).then(function () {
+        M = m;
+        L.code = code; L.mySide = side; L.mode = "guest"; L.screen = "match";
+        L.busy = false; L.terrainMode = false; L.dbErr = "";
+        watchMatch(code); render();
       });
     }).catch(function (e) {
       L.busy = false;
-      var c = (e && e.code) ? e.code : "unknown";
+      var c = (e && (e.code || e.message)) || "unknown";
       if (c === "invalid_argument") L.dbErr = "That code is not valid.";
-      else if (c === "not_granted" || c === "capability_disabled") L.dbErr = "This device is not allowed into live matches. It needs to be signed in to the same workspace as the other phone.";
-      else L.dbErr = "Could not join — " + c + ". Both phones must be on the same link, signed in to the same workspace.";
+      else if (c === "not_granted" || c === "capability_disabled") L.dbErr = "This device is not allowed into live matches.";
+      else L.dbErr = "Could not join — " + c;
       render();
     });
   }
@@ -1754,7 +1850,7 @@
     if (clockEl) clockEl.textContent = clockText();
   }, 1000);
 
-  bootCapabilities();
+  boot();
   render();
 })();
 </script>
