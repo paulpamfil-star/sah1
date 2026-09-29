@@ -8,11 +8,23 @@ prototype has neither. It is built for the stage before that: a wooden board wit
 the map printed over it, a phone standing next to it, and every move entered by
 hand.
 
-**On GitHub Pages (one phone):** https://paulpamfil-star.github.io/sah1/
 **On Claude (one phone or two):** https://claude.ai/artifact/WgKas38sCShyM9tB1bfT6B
+**On GitHub Pages (one phone):** https://paulpamfil-star.github.io/sah1/ — after the one-time switch below
 **Design canvas (reference boards):** https://claude.ai/artifact/J12hreb7yw5R3K8VjcDCpG
 
-The same `app/index.html` is behind both links. The GitHub Pages copy is a plain
+### Turning the GitHub Pages link on
+
+One setting, once, and only a repository admin can do it — a workflow token is
+refused (`Resource not accessible by integration`).
+
+> **Settings → Pages → Build and deployment → Source: _Deploy from a branch_**
+> → branch `claude/cloud-game-prototype-xaag5p`, folder `/docs` → Save.
+
+The site appears at the link above a minute or so later and refreshes on every
+push. `.github/workflows/pages.yml` is there for the day this merges to `main`;
+it needs no setup of its own once Pages is on.
+
+The same `docs/index.html` is behind both links. The GitHub Pages copy is a plain
 static page with no backend, so the two-phone code pairing is inert there and the
 app says so on its opening screen; everything else — the board, the deck, terrain,
 the log, export — works exactly the same. Live pairing needs the shared document
@@ -76,7 +88,7 @@ one-phone path is the whole game and loses nothing except the per-player view.
 ## Layout
 
 ```
-app/
+docs/
   index.html         the console — one phone or two, the thing you actually use
 
 canvas/project/
@@ -87,7 +99,7 @@ canvas/project/
   System.dc.html     palette, type, terrain marks, controls
 ```
 
-`app/index.html` is the live app. The canvas holds the design reference — the
+`docs/index.html` is the live app. The canvas holds the design reference — the
 control-by-control breakdown, the data contract, and the visual language.
 
 ## The record

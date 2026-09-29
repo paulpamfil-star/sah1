@@ -1,9 +1,11 @@
 name: Deploy the console to GitHub Pages
 
+# Only useful once this lands on the default branch. Until then the site is
+# served straight from docs/ on the working branch — Settings → Pages →
+# Deploy from a branch. This workflow needs no further setup when that day comes.
 on:
   push:
-    branches:
-      - claude/cloud-game-prototype-xaag5p
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -23,17 +25,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Configure Pages
-        uses: actions/configure-pages@v5
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
         with:
-          enablement: true
-
-      - name: Upload the app
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: app
-
-      - name: Deploy
-        id: deployment
+          path: docs
+      - id: deployment
         uses: actions/deploy-pages@v4
