@@ -20,11 +20,18 @@ is swapped for a local stand-in that speaks the same shape — one `select`, one
 `upsert`, `postgres_changes` on a code, and channel presence, over polling
 instead of a socket.
 
-So it proves **the app's own pairing and sync logic**: that the code pairs two
-phones, that seats are taken correctly, that a move made on one screen reaches
-the other, that the board is drawn from each player's side, that a card played
-on one phone lands on both, and that nothing throws on either side. That is
-where the joining bug lived.
+So it proves **the app's own game and sync logic**: that the code pairs two
+phones, that the board is drawn from each player's side, that a move made on one
+screen reaches the other and the turn passes by itself, that every refusal is
+said out loud, that the opening is never touched by a hazard, and that each
+hazard — river, frost, trench, revival, swamp — fires correctly and lands on
+both phones. It also asserts the two things that were cut: no terrain painting
+at setup, no "what happened?" prompt, and no English left on screen.
+
+Hazards are fired from the hidden tester's panel rather than waited for, so the
+run is deterministic. The dice themselves (the weights and the climbing chance)
+are not exercised here — only the guard that nothing fires in the first six
+plies.
 
 It proves **nothing about Supabase itself** — not the schema, not row level
 security, not realtime delivery. Those only get tested against the live

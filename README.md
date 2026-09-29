@@ -1,4 +1,6 @@
-# Chess: The Origins — Playtest Console
+# Șah: Originile — consola de test
+
+*The app is in Romanian. This file is the developer's note.*
 
 A companion app prototype for **Chess: The Origins**, the board-game-style chess
 by Anca Rohlicek and Paul Pamfil.
@@ -39,56 +41,88 @@ a product.
 
 ## What this is
 
-Infrastructure, not rules. The console runs the turn and keeps the record; it has
-no idea what your cards or your terrain actually do.
+Infrastructure and the hazards, in Romanian. The console runs the turn, keeps the
+record, and decides what happens to you.
 
-It holds you to ordinary chess — whose turn it is, and where a piece may go — with
-one clearly marked override for when a card or the terrain says otherwise. After
-every move it names what it saw and asks what happened. Terrain, flags and cards
-are carried on every record, and nothing reads them yet.
+It holds you to ordinary chess — whose turn it is, where a piece may go — with one
+marked **Fără reguli** override for when something at the table says otherwise.
+Nothing is asked of the player after a move: the console resolves the turn itself
+and hands it over.
 
-## What it does
+## The hazards
 
-| | |
-|---|---|
-| **Two-tap move entry** | Tap the piece, tap the square. Only the side to move can be picked up; the other side's pieces sit back a shade. Only squares chess allows are accepted. |
-| **Break the rule** | One tap lifts the restriction for a single move, and that move is logged as `OVERRIDE`. |
-| **It asks after every move** | The band names the move and the terrain it landed on, then five plain buttons — Mine, Terrain event, Card played, Move refused, Check — and a free note. One tap ends the turn. |
-| **Terrain** | Marking it is the opening step of a match. Marked squares are tinted and carry an icon, with a legend under the board at all times. |
-| **Card shelf** | Name your cards once at setup, then tap to play one. Each carries a countdown that ticks a step per move and drops off by itself. |
-| **Undo** | Replays the match from the opening position, so the board and the record cannot drift apart. |
-| **Export** | The full log as readable text or as JSON, copied to the clipboard. |
-| **Autosave** | Best-effort to `localStorage`, so a dropped phone does not cost you the match. |
+Nothing is on the board at the start and nobody picks anything. A hazard is drawn
+only when a piece **lands** on a square, and the square it fired on is spent for
+the rest of the match.
+
+| | Hazard | Tier | Weight | What fires |
+|---|---|---|---|---|
+| ░ | Mlaștină | Comun | 30 | The piece that landed is mired — it cannot move for 2 plies |
+| ↝ | Vânt | Comun | 27 | The piece is shoved one square, direction rolled. Blocked, it stays |
+| ≈ | Râu | Neobișnuit | 18 | A run of 3–4 squares floods for 5 plies. Only knights jump it |
+| ❄ | Ger | Neobișnuit | 14 | Knights move and capture as pawns for 3 plies |
+| ✟ | Înviere | Rar | 8 | A fallen piece returns to a square the player chooses |
+| ═ | Cădere în tranșeu | Unic | 3 | The piece is gone for good. Never the king. **Once per match** |
+
+Weights are out of 100, so each reads straight as a percentage of whatever fires.
+
+### The roll
+
+On each completed move, against the square just landed on:
+
+```
+square already fired       → nothing, it is spent
+first 6 plies              → nothing, the opening is safe
+fewer than 3 plies since   → nothing, never two in a row
+otherwise  p = 16% + 4% per quiet ply beyond the third, capped at 45%
+```
+
+The climbing chance is the point: a quiet stretch gets steadily more dangerous, so
+tension builds instead of going flat and a match cannot die quiet. It resets the
+moment something fires. Over a 40-ply game that is six or seven events, with the
+trench landing in roughly one match in five.
+
+Re-draws rather than wasted rolls: the trench on a king, a revival with nothing
+fallen, a second trench after the first.
+
+**Only the phone that made the move rolls**, and it writes the result into the
+shared match. Two phones can never roll different dice for the same move.
+
+### On the board
+
+Every hazard arrives with its own motion — the water rises and runs, the mud
+swallows the square and the piece sinks in it, the ground cracks open, a gust
+crosses, the frost sweeps the whole board, a revived piece comes back in light.
+Each carries a countdown on its own square that ticks every ply and turns amber on
+its last. When it expires it washes off and the square takes a small dot: it is
+safe from then on.
 
 ## What it deliberately does not do
 
-No check or checkmate detection. No castling in one tap (log the king, then the
-rook). No en passant. No per-player chess clock. No sensors, no Bluetooth. And
-nothing anywhere knows what a card or a terrain type does.
+No check or checkmate detection. No castling in one tap. No en passant. No
+per-player clock. No sensors, no Bluetooth. No mountain — that card is out.
 
 ## One phone or two
 
 The opening screen asks. Both paths run the same console.
 
-**One phone, between us.** The phone sits by the board and both players tap into
-it. Nothing networked; the match autosaves to that device.
+**Un telefon, între voi.** It sits by the board and you both tap into it. Nothing
+networked; the match autosaves to that device.
 
-**Two phones, joined by a code.** One player starts a match and gets four
-letters. The other opens the same link, types those letters, and the two are
-live: every move, flag, card and terrain mark appears on both phones at once.
-Each phone shows the board from its own player's side and will only let that
-player move — your opponent's pieces sit back a shade and refuse the tap.
+**Două telefoane, legate printr-un cod.** One player starts a match and gets four
+letters. The other opens the same link, types those letters, and the two are live:
+every move and every hazard appears on both phones at once. Each phone shows the
+board from its own player's side and will only let that player move.
 
-The pairing is one row per match, keyed by the code, with both phones watching
-it. On the public link that row lives in Supabase; inside a Claude artifact it
-lives in the artifact's own store. Whichever it is, every write carries a rising
-`rev` and the writer's tag, so a phone can tell its own echo from the other
-player's move.
+The pairing is one row per match, keyed by the code, with both phones watching it.
+On the public link that row lives in Supabase; inside a Claude artifact it lives in
+the artifact's own store. Whichever it is, every write carries a rising `rev` and
+the writer's tag, so a phone can tell its own echo from the other player's move.
 
 **What two-phone play requires.** On the public link: nothing. No account, no
 workspace — anyone you send the URL to can be the second phone. (Inside a Claude
-artifact both players must be signed in to the same Claude workspace, which is
-why the public link is the one to share.)
+artifact both players must be signed in to the same Claude workspace, which is why
+the public link is the one to share.)
 
 ## Layout
 
@@ -103,13 +137,14 @@ canvas/project/
   canvas.json        the canvas index — frames, order, notes
   Main.dc.html       the single-phone console as a design artboard
   Anatomy.dc.html    every control explained, and the loop at the table
-  Record.dc.html     what one move records, and where the rules plug in
-  System.dc.html     palette, type, terrain marks, controls
+  Record.dc.html     what one move records
+  System.dc.html     palette, type, marks, controls
 ```
 
 `index.html` is the live app, and `docs/index.html` is a copy of it so the site
-serves either way. The canvas holds the design reference — the control-by-control
-breakdown, the data contract, and the visual language.
+serves either way. The canvas holds the design reference; it predates the hazard
+model and shows the earlier card-and-terrain console, so read it for the visual
+language, not for the rules.
 
 ## The record
 
@@ -117,42 +152,25 @@ One move, as the console writes it:
 
 ```json
 {
-  "ply": 8,
-  "no": 4,
-  "side": "b",
-  "move": "Bf8×c5",
-  "from": "f8",
-  "to": "c5",
-  "piece": "bishop",
-  "captured": "pawn",
-  "promotedTo": null,
-  "terrainFrom": null,
-  "terrainTo": "river",
-  "tags": ["CAPTURE", "MINE"],
-  "note": "lost the pawn",
-  "atMs": 412300
+  "ply": 9, "no": 5, "side": "w",
+  "san": "Cg1–f3", "from": "g1", "to": "f3", "piece": "cal",
+  "captured": null, "promotedTo": null, "override": false,
+  "hazard": "swamp", "hazardRo": "Mlaștină",
+  "inPlay": ["river"], "at": 412300
 }
 ```
 
-A card in play:
+A hazard in play:
 
 ```json
-{ "name": "FOG OF WAR", "scope": "BOTH", "left": 2, "fromMove": 4 }
+{ "id": 4, "hzId": "river", "left": 3, "born": 9, "cells": [20, 21, 22], "from": 5 }
 ```
-
-## Where the rules plug in
-
-Four sockets, all wired, none live:
-
-1. **Terrain → movement.** Which terrain changes which piece, and by how much.
-2. **Minefields.** How mines are placed, who sees them, what happens on contact.
-3. **Cards.** Where a card comes from, what it does, whether a player holds a hand.
-4. **Hidden information.** Whether mines, cards in hand or anything else stay
-   secret from the opponent. One shared screen cannot keep a secret, so this is
-   what decides whether the game needs a screen per player.
 
 ## Design
 
-Colours are sampled from the printed board itself — the ochre and moss of the map,
-the brass of the box, on a dark field. EB Garamond for what is said, JetBrains Mono
-for what is counted. The full language is on the `System` artboard.
+Apple HIG shape on the game's own field: type on the iOS Dynamic Type ladder with
+nothing below 11pt, a translucent bar and dock over the content layer, 44pt hit
+regions, one prominent button per view, system red for destructive actions. Board
+colours are sampled from the printed board itself — the ochre and moss of the map,
+the brass of the box, on a dark field. Every animation folds away under
+`prefers-reduced-motion`.
