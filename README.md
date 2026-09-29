@@ -8,8 +8,15 @@ prototype has neither. It is built for the stage before that: a wooden board wit
 the map printed over it, a phone standing next to it, and every move entered by
 hand.
 
-**The app (one or two phones):** https://claude.ai/artifact/WgKas38sCShyM9tB1bfT6B
+**On GitHub Pages (one phone):** https://paulpamfil-star.github.io/sah1/
+**On Claude (one phone or two):** https://claude.ai/artifact/WgKas38sCShyM9tB1bfT6B
 **Design canvas (reference boards):** https://claude.ai/artifact/J12hreb7yw5R3K8VjcDCpG
+
+The same `app/index.html` is behind both links. The GitHub Pages copy is a plain
+static page with no backend, so the two-phone code pairing is inert there and the
+app says so on its opening screen; everything else — the board, the deck, terrain,
+the log, export — works exactly the same. Live pairing needs the shared document
+store the Claude build runs on, or a backend of your own.
 
 ---
 

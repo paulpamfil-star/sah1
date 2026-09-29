@@ -62,7 +62,16 @@
   input { font-family: inherit; font-size: 17px; }
   :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
 
-  .app { height: 100%; display: flex; flex-direction: column; overflow: hidden; }
+  /* It is a phone app. On a wider screen it stays a phone-shaped column
+     rather than stretching the board and the legend across the desk. */
+  .app {
+    height: 100%; width: 100%; max-width: 520px; margin: 0 auto;
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  @media (min-width: 560px) {
+    body { background: #05080C; }
+    .app { border-left: 1px solid var(--sep); border-right: 1px solid var(--sep); background: var(--bg); }
+  }
 
   /* ── type ladder ─────────────────────────────────────────── */
   .t-large  { font-size: 34px; line-height: 1.06; font-weight: 700; letter-spacing: -.4px; }
@@ -198,7 +207,8 @@
   .boardzone { flex: 0 0 auto; padding: 12px 16px 6px; display: flex; gap: 6px; justify-content: center; }
   .ranks { display: flex; flex-direction: column; width: 14px; flex: 0 0 auto; }
   .ranks div { flex: 1; display: flex; align-items: center; justify-content: center; }
-  .boardcol { width: 100%; max-width: 372px; }
+  /* the board never grows so tall that it pushes the dock off the screen */
+  .boardcol { width: 100%; max-width: min(372px, 44vh); }
   .board {
     display: grid; grid-template-columns: repeat(8, minmax(0, 1fr));
     border-radius: var(--r-sm); overflow: hidden; border: 1px solid var(--sep-strong);
@@ -491,6 +501,13 @@
   // ───────── capabilities ─────────
   var db = null, room = null, myId = null, matchRef = null, unsubDoc = null;
 
+  // Snapshots from the store arrive FROZEN. This file runs in strict mode, so
+  // writing to one throws — which is what silently broke joining. Everything
+  // that becomes our mutable match state goes through here first.
+  function thaw(o) {
+    try { return JSON.parse(JSON.stringify(o)); } catch (e) { return null; }
+  }
+
   function deviceId() {
     try {
       var k = "cto-device-id", v = window.localStorage.getItem(k);
@@ -547,13 +564,14 @@
     matchRef = db.doc("matches/" + code);
     unsubDoc = matchRef.onSnapshot(function (snap) {
       if (!snap.exists) return;
-      var d = snap.data();
+      var d = thaw(snap.data());
       if (!d || !d.board) return;
       if (snap.metadata && snap.metadata.hasPendingWrites) return;
       var hadCards = M.cards ? M.cards.length : 0;
       M = d;
       if (!M.barrier) M.barrier = [];
       if (!M.fallen) M.fallen = [];
+      if (!M.cards) M.cards = [];
       // the other phone played a card: show it here too
       if (M.cards.length > hadCards) {
         var fresh = M.cards[M.cards.length - 1];
@@ -864,9 +882,11 @@
       var left = c.left - 1;
       if (left > 0) { var n = {}; for (var k in c) n[k] = c[k]; n.left = left; kept.push(n); }
     });
-    var lostBarrier = M.cards.length && !kept.some(function (c) { return c.cardId === "river" || c.cardId === "flood"; });
     M.cards = kept;
-    if (lostBarrier) { M.barrier = []; M.barrierJumpable = true; }
+    // the water is only there while a river card is
+    if (!kept.some(function (c) { return c.cardId === "river" || c.cardId === "flood"; })) {
+      M.barrier = []; M.barrierJumpable = true;
+    }
 
     M.phase = "move";
     M.turn = M.turn === "w" ? "b" : "w";
@@ -1031,6 +1051,10 @@
     ]));
     p.appendChild(opts);
 
+    if (!db && !window.claude) {
+      p.appendChild(t("div", "t-foot", "This copy runs on its own — one phone only. Live two-phone pairing works on the Claude-hosted build."));
+    }
+
     if (saved) {
       p.appendChild(el("button", {
         class: "btn plain", type: "button", text: "Resume · " + (saved.session || "last match"),
@@ -1143,28 +1167,61 @@
     L.busy = true; L.dbErr = ""; render();
 
     var code = L.codeDraft, ref = db.doc("matches/" + code), me = myId || deviceId();
-    ref.acquire({ holder: me, ttlMs: 6000 }).then(function (res) {
-      if (!res.acquired) { L.busy = false; L.dbErr = "Someone else is joining right now. Try again in a moment."; return render(); }
+
+    // The lease only guards against two people typing the same code in the same
+    // second. Not every runtime serves it, so a refusal is not a reason to stop.
+    function lease() {
+      try {
+        return ref.acquire({ holder: me, ttlMs: 6000 })
+          .then(function (r) { return r; }, function () { return { acquired: true }; });
+      } catch (e) { return Promise.resolve({ acquired: true }); }
+    }
+
+    lease().then(function (res) {
+      if (res && res.acquired === false) {
+        L.busy = false;
+        L.dbErr = "Someone else is joining right now. Try again in a moment.";
+        return render();
+      }
       return ref.get().then(function (snap) {
-        if (!snap.exists) { L.busy = false; L.dbErr = "No match with that code. Check the letters on the other phone."; return render(); }
-        var m = snap.data();
+        if (!snap.exists) {
+          L.busy = false;
+          L.dbErr = "No match with the code " + code + ". Check the letters on the other phone.";
+          return render();
+        }
+        var m = thaw(snap.data());
+        if (!m || !m.board) { L.busy = false; L.dbErr = "That match looks damaged. Start a new one."; return render(); }
+        if (!m.barrier) m.barrier = [];
+        if (!m.fallen) m.fallen = [];
+        if (!m.cards) m.cards = [];
+
         var seat = { id: me, name: (L.myName || "").trim() || "Player" }, side;
         if (!m.white) side = "w";
         else if (!m.black) side = "b";
         else if (m.white.id === me) side = "w";
         else if (m.black.id === me) side = "b";
         else { L.busy = false; L.dbErr = "That match already has two players."; return render(); }
-        var patch = {}; patch[side === "w" ? "white" : "black"] = seat;
-        return ref.update(patch).then(function () {
-          M = m; if (!M.barrier) M.barrier = []; if (!M.fallen) M.fallen = [];
-          if (side === "w") M.white = seat; else M.black = seat;
+
+        if (side === "w") m.white = seat; else m.black = seat;
+
+        var patch = {};
+        patch[side === "w" ? "white" : "black"] = seat;
+
+        function seated() {
+          M = m;
           L.code = code; L.mySide = side; L.mode = "guest"; L.screen = "match";
-          L.busy = false; L.terrainMode = false; watchMatch(code); render();
-        });
+          L.busy = false; L.terrainMode = false; L.dbErr = "";
+          watchMatch(code); render();
+        }
+        // update() merges; if this runtime will not merge, write the whole doc.
+        return ref.update(patch).then(seated, function () { return ref.set(m).then(seated); });
       });
     }).catch(function (e) {
       L.busy = false;
-      L.dbErr = (e && e.code === "invalid_argument") ? "That code is not valid." : "Could not join. Check that both phones are on the same link.";
+      var c = (e && e.code) ? e.code : "unknown";
+      if (c === "invalid_argument") L.dbErr = "That code is not valid.";
+      else if (c === "not_granted" || c === "capability_disabled") L.dbErr = "This device is not allowed into live matches. It needs to be signed in to the same workspace as the other phone.";
+      else L.dbErr = "Could not join — " + c + ". Both phones must be on the same link, signed in to the same workspace.";
       render();
     });
   }
